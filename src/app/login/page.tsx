@@ -54,11 +54,11 @@ export default function LoginPage() {
     if (error) {
       setStatus(error.message);
     } else {
-      setStatus(
-        mode === "login"
-          ? "Logged in successfully."
-          : "Check your email to confirm your account."
-      );
+      if (mode === "login") {
+        window.location.assign("/");
+      } else {
+        setStatus("Check your email to confirm your account.");
+      }
     }
 
     setLoading(false);

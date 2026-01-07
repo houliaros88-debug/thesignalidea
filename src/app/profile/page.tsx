@@ -129,10 +129,7 @@ export default function ProfilePage() {
             type="button"
             onClick={async () => {
               await supabase.auth.signOut({ scope: "local" });
-              if (typeof window !== "undefined") {
-                window.sessionStorage.setItem("tsilogout", "1");
-              }
-              window.location.assign("/login?logged_out=1");
+              window.location.assign("/login");
             }}
             style={{
               border: '1px solid #111',
