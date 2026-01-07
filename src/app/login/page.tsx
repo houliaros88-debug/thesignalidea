@@ -20,6 +20,11 @@ export default function LoginPage() {
     if (mode === "signup") {
       const hasLetter = /[A-Za-z]/.test(password);
       const hasNumber = /\d/.test(password);
+      if (password.length < 8) {
+        setStatus("Password must be at least 8 characters.");
+        setLoading(false);
+        return;
+      }
       if (!hasLetter || !hasNumber) {
         setStatus("Password must include at least one letter and one number.");
         setLoading(false);

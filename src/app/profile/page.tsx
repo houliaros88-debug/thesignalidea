@@ -1,11 +1,9 @@
 "use client";
 import Image from "next/image";
 import React, { useState } from "react";
-import { useRouter } from "next/navigation";
 import { supabase } from "../../lib/supabaseClient";
 
 export default function ProfilePage() {
-  const router = useRouter();
   const [activeTab, setActiveTab] = useState('Ideas');
   const ideas = Array.from({ length: 8 }).map((_, i) => ({
     id: i + 1,
@@ -86,10 +84,6 @@ export default function ProfilePage() {
         <div style={{ display: 'flex', gap: 12 }}>
           <button
             type="button"
-            onClick={async () => {
-              await supabase.auth.signOut();
-              router.replace("/login");
-            }}
             style={{
               border: '1px solid #111',
               background: 'transparent',
@@ -133,6 +127,13 @@ export default function ProfilePage() {
           </button>
           <button
             type="button"
+            onClick={async () => {
+              await supabase.auth.signOut({ scope: "local" });
+              if (typeof window !== "undefined") {
+                window.sessionStorage.setItem("tsilogout", "1");
+              }
+              window.location.assign("/login?logged_out=1");
+            }}
             style={{
               border: '1px solid #111',
               background: 'transparent',
