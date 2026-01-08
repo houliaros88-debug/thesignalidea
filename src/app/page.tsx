@@ -1,22 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Cormorant_Garamond, Manrope } from "next/font/google";
 import { supabase } from "../lib/supabaseClient";
 import IdeaCarousel from "./components/IdeaCarousel";
 import styles from "./home.module.css";
-
-const serif = Cormorant_Garamond({
-  subsets: ["latin"],
-  weight: ["400", "600", "700"],
-  variable: "--font-serif",
-});
-
-const sans = Manrope({
-  subsets: ["latin"],
-  weight: ["300", "400", "500", "600"],
-  variable: "--font-sans",
-});
 
 export default function Home() {
   const [userId, setUserId] = useState<string | null>(null);
@@ -136,7 +123,7 @@ export default function Home() {
   };
 
   return (
-    <div className={`${styles.luxHome} ${serif.variable} ${sans.variable}`}>
+    <div className={styles.luxHome}>
       <div className={styles.videoStack}>
         {followedIdeas.length > 0 && (
           <div className={styles.followFeed}>

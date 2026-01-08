@@ -1,12 +1,13 @@
 "use client";
 
 import React, { useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { supabase } from "../../lib/supabaseClient";
+
+export const dynamic = "force-dynamic";
 
 export default function LoginPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [mode, setMode] = useState<"login" | "signup">("login");
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -69,7 +70,10 @@ export default function LoginPage() {
             updated_at: new Date().toISOString(),
           });
         }
-        const nextPath = searchParams?.get("next");
+        const nextPath =
+          typeof window !== "undefined"
+            ? new URLSearchParams(window.location.search).get("next")
+            : null;
         const target =
           nextPath && nextPath.startsWith("/") && nextPath !== "/login"
             ? nextPath

@@ -8,6 +8,8 @@ import { ideasByCategory, type Idea } from "../data/categories";
 import { supabase } from "../../lib/supabaseClient";
 import IdeaCarousel from "../components/IdeaCarousel";
 
+export const dynamic = "force-dynamic";
+
 type IdeaCard = Idea & {
   category?: string;
   photoUrl?: string | null;

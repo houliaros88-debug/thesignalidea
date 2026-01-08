@@ -5,6 +5,8 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "../../lib/supabaseClient";
 import IdeaCarousel from "../components/IdeaCarousel";
 
+export const dynamic = "force-dynamic";
+
 export default function ProfilePage() {
   const router = useRouter();
   const searchParams = useSearchParams();

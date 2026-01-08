@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { CategoryProvider } from "./components/CategoryContext";
 import HeaderShell from "./components/HeaderShell";
 import { HomeTabProvider } from "./components/HomeTabContext";
@@ -15,7 +16,9 @@ export default function RootLayout({
       <body>
         <CategoryProvider>
           <HomeTabProvider>
-            <HeaderShell />
+            <Suspense fallback={null}>
+              <HeaderShell />
+            </Suspense>
             <AuthGate>
               <main>{children}</main>
             </AuthGate>

@@ -6,6 +6,8 @@ import { useSearchParams } from "next/navigation";
 import { supabase } from "../../lib/supabaseClient";
 import { categories } from "../data/categories";
 
+export const dynamic = "force-dynamic";
+
 type UploadType = "Idea" | "Picture" | "Video" | "Job";
 
 const uploadTabs: UploadType[] = ["Idea", "Picture", "Video", "Job"];
