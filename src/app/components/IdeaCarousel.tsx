@@ -30,9 +30,12 @@ export default function IdeaCarousel({
   const [videoProgress, setVideoProgress] = useState(0);
   const [liked, setLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(0);
+  const [likePending, setLikePending] = useState(false);
   const [isCommentOpen, setIsCommentOpen] = useState(false);
   const [shareCount, setShareCount] = useState(0);
   const [isShareOpen, setIsShareOpen] = useState(false);
+  const [viewCountUnique, setViewCountUnique] = useState(0);
+  const [viewCountTotal, setViewCountTotal] = useState(0);
   const [commentText, setCommentText] = useState("");
   const [comments, setComments] = useState<
     Array<{
@@ -49,6 +52,8 @@ export default function IdeaCarousel({
     name: string;
     photoUrl: string | null;
   } | null>(null);
+  const hasRecordedUniqueView = useRef(false);
+  const hasRecordedTotalView = useRef(false);
   const rafRef = useRef<number | null>(null);
   const controlButtonStyle = {
     width: 40,
@@ -59,6 +64,93 @@ export default function IdeaCarousel({
     display: "grid",
     placeItems: "center",
   };
+
+  useEffect(() => {
+    hasRecordedUniqueView.current = false;
+    hasRecordedTotalView.current = false;
+  }, [ideaId]);
+
+  useEffect(() => {
+    let isActive = true;
+    const loadViewCounts = async () => {
+      if (!ideaId) {
+        setViewCountUnique(0);
+        setViewCountTotal(0);
+        return;
+      }
+      const [uniqueRes, totalRes] = await Promise.all([
+        supabase
+          .from("idea_views")
+          .select("id", { count: "exact", head: true })
+          .eq("idea_id", ideaId),
+        supabase
+          .from("idea_view_events")
+          .select("id", { count: "exact", head: true })
+          .eq("idea_id", ideaId),
+      ]);
+      if (!isActive) return;
+      if (uniqueRes.error) {
+        setViewCountUnique(0);
+      } else {
+        setViewCountUnique(uniqueRes.count ?? 0);
+      }
+      if (totalRes.error) {
+        setViewCountTotal(0);
+      } else {
+        setViewCountTotal(totalRes.count ?? 0);
+      }
+    };
+    loadViewCounts();
+    return () => {
+      isActive = false;
+    };
+  }, [ideaId]);
+
+  useEffect(() => {
+    let isActive = true;
+    const recordUniqueView = async () => {
+      if (!ideaId || !currentUser?.id || hasRecordedUniqueView.current) return;
+      hasRecordedUniqueView.current = true;
+      const { error } = await supabase
+        .from("idea_views")
+        .upsert(
+          { idea_id: ideaId, user_id: currentUser.id },
+          { onConflict: "idea_id,user_id", ignoreDuplicates: true }
+        );
+      if (error) return;
+      const { count } = await supabase
+        .from("idea_views")
+        .select("id", { count: "exact", head: true })
+        .eq("idea_id", ideaId);
+      if (!isActive) return;
+      if (typeof count === "number") {
+        setViewCountUnique(count);
+      }
+    };
+    recordUniqueView();
+    return () => {
+      isActive = false;
+    };
+  }, [ideaId, currentUser?.id]);
+
+  useEffect(() => {
+    let isActive = true;
+    const recordTotalView = async () => {
+      if (!ideaId || !currentUser?.id || hasRecordedTotalView.current) return;
+      hasRecordedTotalView.current = true;
+      const { error } = await supabase.from("idea_view_events").insert({
+        idea_id: ideaId,
+        user_id: currentUser.id,
+      });
+      if (error) return;
+      if (!isActive) return;
+      setViewCountTotal((count) => count + 1);
+    };
+    recordTotalView();
+    return () => {
+      isActive = false;
+    };
+  }, [ideaId, currentUser?.id]);
 
   const formatTimeAgo = (value: string | null) => {
     if (!value) return "Just now";
@@ -104,6 +196,43 @@ export default function IdeaCarousel({
       isActive = false;
     };
   }, []);
+
+  useEffect(() => {
+    let isActive = true;
+    const loadLikes = async () => {
+      if (!ideaId) {
+        setLikeCount(0);
+        setLiked(false);
+        return;
+      }
+      const { count, error } = await supabase
+        .from("idea_likes")
+        .select("id", { count: "exact", head: true })
+        .eq("idea_id", ideaId);
+      if (!isActive) return;
+      if (error) {
+        setLikeCount(0);
+        return;
+      }
+      setLikeCount(count ?? 0);
+      if (currentUser?.id) {
+        const { data } = await supabase
+          .from("idea_likes")
+          .select("id")
+          .eq("idea_id", ideaId)
+          .eq("user_id", currentUser.id)
+          .maybeSingle();
+        if (!isActive) return;
+        setLiked(!!data);
+      } else {
+        setLiked(false);
+      }
+    };
+    loadLikes();
+    return () => {
+      isActive = false;
+    };
+  }, [ideaId, currentUser?.id]);
 
   useEffect(() => {
     let isActive = true;
@@ -293,17 +422,47 @@ export default function IdeaCarousel({
     setCommentText("");
   };
 
-  const handleLikeToggle = () => {
-    setLiked((prev) => !prev);
-    setLikeCount((count) =>
-      Math.max(0, count + (liked ? -1 : 1))
-    );
+  const addLike = async () => {
+    if (!ideaId || !currentUser?.id || likePending || liked) return;
+    setLikePending(true);
+    const { error } = await supabase.from("idea_likes").insert({
+      idea_id: ideaId,
+      user_id: currentUser.id,
+    });
+    if (!error) {
+      setLiked(true);
+      setLikeCount((count) => count + 1);
+    }
+    setLikePending(false);
+  };
+
+  const removeLike = async () => {
+    if (!ideaId || !currentUser?.id || likePending || !liked) return;
+    setLikePending(true);
+    const { error } = await supabase
+      .from("idea_likes")
+      .delete()
+      .eq("idea_id", ideaId)
+      .eq("user_id", currentUser.id);
+    if (!error) {
+      setLiked(false);
+      setLikeCount((count) => Math.max(0, count - 1));
+    }
+    setLikePending(false);
+  };
+
+  const handleLikeToggle = async () => {
+    if (!currentUser?.id) return;
+    if (liked) {
+      await removeLike();
+    } else {
+      await addLike();
+    }
   };
 
   const handleLikeOnce = () => {
-    if (liked) return;
-    setLiked(true);
-    setLikeCount((count) => count + 1);
+    if (!currentUser?.id || liked) return;
+    void addLike();
   };
 
   const handleShare = async () => {
@@ -449,6 +608,71 @@ export default function IdeaCarousel({
           }}
         >
           {comments.length}
+        </span>
+      </div>
+      <div style={{ display: "grid", justifyItems: "center", gap: 6 }}>
+        <div
+          style={{
+            ...controlButtonStyle,
+            color: "#fff",
+          }}
+          aria-hidden="true"
+          title="Unique views"
+        >
+          <svg width="26" height="26" viewBox="0 0 24 24" aria-hidden="true">
+            <path
+              d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6z"
+              fill="none"
+              stroke="#fff"
+              strokeWidth="1.5"
+            />
+            <circle cx="12" cy="12" r="3" fill="none" stroke="#fff" strokeWidth="1.5" />
+          </svg>
+        </div>
+        <span
+          style={{
+            fontSize: 11,
+            letterSpacing: "0.12em",
+            textTransform: "uppercase",
+          }}
+        >
+          {viewCountUnique}
+        </span>
+      </div>
+      <div style={{ display: "grid", justifyItems: "center", gap: 6 }}>
+        <div
+          style={{
+            ...controlButtonStyle,
+            color: "#fff",
+          }}
+          aria-hidden="true"
+          title="Total views"
+        >
+          <svg width="26" height="26" viewBox="0 0 24 24" aria-hidden="true">
+            <path
+              d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6z"
+              fill="none"
+              stroke="#fff"
+              strokeWidth="1.5"
+            />
+            <circle cx="12" cy="12" r="3" fill="none" stroke="#fff" strokeWidth="1.5" />
+            <path
+              d="M8 12h8"
+              fill="none"
+              stroke="#fff"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+            />
+          </svg>
+        </div>
+        <span
+          style={{
+            fontSize: 11,
+            letterSpacing: "0.12em",
+            textTransform: "uppercase",
+          }}
+        >
+          {viewCountTotal}
         </span>
       </div>
       <div style={{ display: "grid", justifyItems: "center", gap: 6 }}>
