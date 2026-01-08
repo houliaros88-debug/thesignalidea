@@ -29,6 +29,18 @@ type IdeaRow = {
 };
 
 export default function TheIdeaPage() {
+  const formatTimeAgo = (value?: string | null) => {
+    if (!value) return null;
+    const created = new Date(value).getTime();
+    const diffMs = Date.now() - created;
+    const diffMins = Math.floor(diffMs / 60000);
+    if (diffMins < 1) return "Just now";
+    if (diffMins < 60) return `${diffMins}m ago`;
+    const diffHours = Math.floor(diffMins / 60);
+    if (diffHours < 24) return `${diffHours}h ago`;
+    const diffDays = Math.floor(diffHours / 24);
+    return `${diffDays}d ago`;
+  };
   const searchParams = useSearchParams();
   const { activeCategory } = useCategory();
   const ideas = activeCategory ? ideasByCategory[activeCategory] ?? [] : [];
@@ -342,6 +354,10 @@ export default function TheIdeaPage() {
                   photoUrl={idea.photoUrl}
                   videoUrl={idea.videoUrl}
                   title={idea.title}
+                  ideaId={idea.id}
+                  userName={idea.user}
+                  userPhotoUrl={idea.userPhotoUrl}
+                  timeLabel={formatTimeAgo(idea.createdAt)}
                 />
                 <div style={{ marginTop: 10 }}>
                   <button

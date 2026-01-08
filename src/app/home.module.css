@@ -432,21 +432,21 @@
 
 .followFeed {
   width: min(92vw, 560px);
-  margin: 24px auto 0;
-  height: calc(min(130vh, 1200px) + 140px);
+  margin: 16px auto 0;
+  height: calc(min(130vh, 1200px) + 100px);
   overflow-y: auto;
   scroll-snap-type: y mandatory;
   display: grid;
-  gap: 24px;
-  padding-bottom: 24px;
+  gap: 12px;
+  padding-bottom: 16px;
 }
 
 .followCard {
   scroll-snap-align: start;
   display: grid;
-  gap: 12px;
+  gap: 8px;
   justify-items: center;
-  height: calc(min(130vh, 1200px) + 140px);
+  height: calc(min(130vh, 1200px) + 100px);
 }
 
 .followHeader {

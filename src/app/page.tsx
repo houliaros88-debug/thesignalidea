@@ -53,17 +53,28 @@ export default function Home() {
         setFollowedIdeas([]);
         return;
       }
-      const { data: follows, error: followsError } = await supabase
-        .from("follows")
-        .select("follower_id")
-        .eq("following_id", userId);
+      const [{ data: followers, error: followersError }, { data: following, error: followingError }] =
+        await Promise.all([
+          supabase
+            .from("follows")
+            .select("follower_id")
+            .eq("following_id", userId),
+          supabase
+            .from("follows")
+            .select("following_id")
+            .eq("follower_id", userId),
+        ]);
       if (!isActive) return;
-      if (followsError) {
+      if (followersError || followingError) {
         setFollowedIdeas([]);
         return;
       }
-      const followerIds = (follows ?? []).map((row) => row.follower_id);
-      if (followerIds.length === 0) {
+      const followerIds = (followers ?? []).map((row) => row.follower_id);
+      const followingIds = (following ?? []).map((row) => row.following_id);
+      const networkIds = Array.from(
+        new Set([userId, ...followerIds, ...followingIds].filter(Boolean))
+      ) as string[];
+      if (networkIds.length === 0) {
         setFollowedIdeas([]);
         return;
       }
@@ -72,7 +83,7 @@ export default function Home() {
         .select(
           "id,title,description,photo_url,video_url,created_at,user_id"
         )
-        .in("user_id", followerIds)
+        .in("user_id", networkIds)
         .order("created_at", { ascending: false });
       if (!isActive) return;
       if (ideasError) {
@@ -82,7 +93,7 @@ export default function Home() {
       const { data: profiles } = await supabase
         .from("profiles")
         .select("id, full_name, photo_url")
-        .in("id", followerIds);
+        .in("id", networkIds);
       const profileMap = (profiles ?? []).reduce(
         (acc, profile) => {
           acc[profile.id] = {
@@ -131,30 +142,15 @@ export default function Home() {
           <div className={styles.followFeed}>
             {followedIdeas.map((idea) => (
               <div key={idea.id} className={styles.followCard}>
-                <div className={styles.followHeader}>
-                  {idea.userPhotoUrl ? (
-                    <img
-                      className={styles.followAvatar}
-                      src={idea.userPhotoUrl}
-                      alt={`${idea.userName} profile`}
-                    />
-                  ) : (
-                    <div className={styles.followAvatarFallback}>
-                      {idea.userName.trim().slice(0, 1).toUpperCase()}
-                    </div>
-                  )}
-                  <div className={styles.followMeta}>
-                    <div className={styles.followName}>{idea.userName}</div>
-                    <div className={styles.followTime}>
-                      {formatTimeAgo(idea.createdAt)}
-                    </div>
-                  </div>
-                </div>
                 <IdeaCarousel
                   description={idea.description}
                   photoUrl={idea.photoUrl}
                   videoUrl={idea.videoUrl}
                   title={idea.title}
+                  ideaId={idea.id}
+                  userName={idea.userName}
+                  userPhotoUrl={idea.userPhotoUrl}
+                  timeLabel={formatTimeAgo(idea.createdAt)}
                 />
               </div>
             ))}

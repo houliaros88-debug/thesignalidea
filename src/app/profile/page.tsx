@@ -431,6 +431,10 @@ export default function ProfilePage() {
                 photoUrl={idea.photoUrl}
                 videoUrl={idea.videoUrl}
                 title={idea.title || "Untitled idea"}
+                ideaId={idea.id}
+                userName={userName}
+                userPhotoUrl={photoUrl}
+                timeLabel={formatTimeAgo(idea.createdAt)}
               />
               <div style={{ fontSize: 13, color: '#888', fontStyle: 'italic', marginTop: 8, textAlign: 'right' }}>
                 Posted by {userName} • {formatTimeAgo(idea.createdAt)}
