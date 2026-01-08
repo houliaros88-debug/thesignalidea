@@ -116,7 +116,7 @@ export default function PartnersHeader() {
               style={{
                 marginTop: 8,
                 border: "1px solid #111",
-                background: "#f3eee6",
+                background: "#0f0f0f",
                 padding: 8,
                 display: "grid",
                 gap: 6,
@@ -157,7 +157,7 @@ export default function PartnersHeader() {
                 alt={item.category}
                 width={360}
                 height={220}
-                style={{ width: "100%", height: "auto", borderRadius: 8 }}
+                style={{ width: "100%", height: "auto", borderRadius: 24 }}
               />
               <div style={{ marginTop: 8, fontSize: 13, color: "#222" }}>
                 {item.text}

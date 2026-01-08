@@ -1,9 +1,12 @@
 "use client";
 
 import React, { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "../../lib/supabaseClient";
 
 export default function LoginPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [mode, setMode] = useState<"login" | "signup">("login");
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -55,7 +58,23 @@ export default function LoginPage() {
       setStatus(error.message);
     } else {
       if (mode === "login") {
-        window.location.assign("/");
+        const { data: userData } = await supabase.auth.getUser();
+        if (userData.user) {
+          const meta = userData.user.user_metadata ?? {};
+          await supabase.from("profiles").upsert({
+            id: userData.user.id,
+            full_name: meta.full_name || meta.name || userData.user.email,
+            bio: meta.bio || "",
+            photo_url: meta.photo_url || meta.avatar_url || null,
+            updated_at: new Date().toISOString(),
+          });
+        }
+        const nextPath = searchParams?.get("next");
+        const target =
+          nextPath && nextPath.startsWith("/") && nextPath !== "/login"
+            ? nextPath
+            : "/";
+        router.replace(target);
       } else {
         setStatus("Check your email to confirm your account.");
       }
@@ -66,293 +85,236 @@ export default function LoginPage() {
 
   return (
     <div
-      className="nyt-main"
       style={{
-        maxWidth: 980,
-        margin: "32px auto",
-        padding: "0 16px",
+        width: "100%",
+        maxWidth: "100%",
+        margin: "-32px 0",
+        padding: "48px 16px 56px",
+        boxSizing: "border-box",
+        background: "#0b0b0b",
+        color: "#f5f2ea",
+        minHeight: "calc(100vh - 64px)",
       }}
     >
       <div
         style={{
-          maxWidth: 900,
-          margin: "0 auto",
+          width: "100%",
         }}
       >
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "1fr 1fr",
-            gap: 64,
+            gridTemplateColumns: "minmax(0, 520px)",
+            gap: 8,
             alignItems: "stretch",
-          }}
-        >
-        <div
-          style={{
-            minHeight: 420,
-            border: "1px solid #111",
-            padding: "28px",
-            borderRadius: 10,
-            background:
-              "linear-gradient(160deg, #f8f3ea 0%, #efe6d7 100%)",
-            boxShadow: "0 10px 30px rgba(0, 0, 0, 0.08)",
+            width: "100%",
+            justifyContent: "center",
           }}
         >
           <div
             style={{
-              fontSize: 24,
-              fontWeight: 700,
-              marginBottom: 10,
-              letterSpacing: "0.08em",
-              textTransform: "uppercase",
-            }}
-          >
-            The Signal Idea
-          </div>
-          <div
-            style={{
-              fontSize: 14,
-              color: "#2f2a24",
-              marginBottom: 18,
-              lineHeight: 1.6,
-            }}
-          >
-            A platform for bold ideas, early signals, and real momentum. Share
-            your vision, earn support, and compete when your category reaches
-            the threshold.
-          </div>
-          <div style={{ fontSize: 13, color: "#2f2a24", lineHeight: 1.8 }}>
-            Submit ideas across categories
-            <br />
-            Signal support before voting starts
-            <br />
-            Build visibility without pay to win
-            <br />
-            Compete for the prize pool
-          </div>
-          <div
-            style={{
-              marginTop: 18,
-              paddingTop: 12,
-              borderTop: "1px solid #cdbfa7",
-              fontSize: 12,
-              letterSpacing: "0.08em",
-              textTransform: "uppercase",
-              color: "#6c5b45",
-            }}
-          >
-            Ideas. Signals. Momentum.
-          </div>
-        </div>
-
-        <div
-          style={{
-            minHeight: 420,
-            border: "1px solid #111",
-            padding: "28px",
-            borderRadius: 10,
-            background: "#fbf8f2",
-            boxShadow: "0 10px 30px rgba(0, 0, 0, 0.08)",
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              gap: 12,
-              marginBottom: 16,
-              justifyContent: "center",
-            }}
-          >
-            <button
-              type="button"
-              onClick={() => setMode("login")}
-              style={{
-                border: "1px solid #111",
-                background: mode === "login" ? "#111" : "transparent",
-                color: mode === "login" ? "#fff" : "#111",
-                padding: "6px 14px",
-                borderRadius: 999,
-                fontSize: 12,
-                fontWeight: 600,
-                cursor: "pointer",
-                letterSpacing: "0.04em",
-                textTransform: "uppercase",
-              }}
-            >
-              Log In
-            </button>
-            <button
-              type="button"
-              onClick={() => setMode("signup")}
-              style={{
-                border: "1px solid #111",
-                background: mode === "signup" ? "#111" : "transparent",
-                color: mode === "signup" ? "#fff" : "#111",
-                padding: "6px 14px",
-                borderRadius: 999,
-                fontSize: 12,
-                fontWeight: 600,
-                cursor: "pointer",
-                letterSpacing: "0.04em",
-                textTransform: "uppercase",
-              }}
-            >
-              Sign Up
-            </button>
-          </div>
-
-          <form onSubmit={handleSubmit}>
-            {mode === "signup" && (
-              <>
-                <label
-                  htmlFor="fullName"
-                style={{
-                  display: "block",
-                  fontSize: 12,
-                  marginBottom: 6,
-                  letterSpacing: "0.04em",
-                  textTransform: "uppercase",
-                }}
-              >
-                Full name
-              </label>
-              <input
-                id="fullName"
-                type="text"
-                autoComplete="name"
-                value={fullName}
-                onChange={(event) => setFullName(event.target.value)}
-                required={mode === "signup"}
-                style={{
-                  width: "100%",
-                  border: "1px solid #111",
-                  borderRadius: 8,
-                  padding: "10px 12px",
-                  marginBottom: 16,
-                  background: "#f3eee6",
-                }}
-              />
-            </>
-          )}
-          <label
-            htmlFor="email"
-            style={{
-              display: "block",
-              fontSize: 12,
-              marginBottom: 6,
-              letterSpacing: "0.04em",
-              textTransform: "uppercase",
-            }}
-          >
-            Email
-          </label>
-          <input
-            id="email"
-            type="email"
-            autoComplete="email"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            required
-            style={{
+              minHeight: 520,
+              border: "none",
+              padding: "32px",
+              borderRadius: 10,
+              background: "transparent",
+              boxShadow: "none",
               width: "100%",
-              border: "1px solid #111",
-              borderRadius: 8,
-              padding: "10px 12px",
-              marginBottom: 16,
-              background: "#f3eee6",
-            }}
-          />
-
-          <label
-            htmlFor="password"
-            style={{
-              display: "block",
-              fontSize: 12,
-              marginBottom: 6,
-              letterSpacing: "0.04em",
-              textTransform: "uppercase",
+              order: 1,
             }}
           >
-            Password
-          </label>
-          <input
-            id="password"
-            type="password"
-            autoComplete={
-              mode === "login" ? "current-password" : "new-password"
-            }
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-            required
-            style={{
-              width: "100%",
-              border: "1px solid #111",
-              borderRadius: 8,
-              padding: "10px 12px",
-              marginBottom: 16,
-              background: "#f3eee6",
-            }}
-          />
-          {mode === "signup" && (
-            <>
+            <form onSubmit={handleSubmit}>
+              {mode === "signup" && (
+                <>
               <label
-                htmlFor="confirmPassword"
+                htmlFor="fullName"
                 style={{
                   display: "block",
                   fontSize: 12,
                   marginBottom: 6,
                   letterSpacing: "0.04em",
                   textTransform: "uppercase",
+                  color: "#f5f2ea",
                 }}
               >
-                Confirm password
+                    Full name
+                  </label>
+                  <input
+                    id="fullName"
+                    type="text"
+                    autoComplete="name"
+                    value={fullName}
+                    onChange={(event) => setFullName(event.target.value)}
+                    required={mode === "signup"}
+                    style={{
+                      width: "100%",
+                      border: "none",
+                      borderRadius: 8,
+                      padding: "10px 12px",
+                      marginBottom: 16,
+                      background: "#101010",
+                      color: "#f5f2ea",
+                    }}
+                  />
+                </>
+              )}
+              <label
+                htmlFor="email"
+                style={{
+                  display: "block",
+                  fontSize: 12,
+                  marginBottom: 6,
+                  letterSpacing: "0.04em",
+                  textTransform: "uppercase",
+                  color: "#f5f2ea",
+                }}
+              >
+                Email
               </label>
               <input
-                id="confirmPassword"
-                type="password"
-                autoComplete="new-password"
-                value={confirmPassword}
-                onChange={(event) => setConfirmPassword(event.target.value)}
-                required={mode === "signup"}
+                id="email"
+                type="email"
+                autoComplete="email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                required
                 style={{
                   width: "100%",
-                  border: "1px solid #111",
+                  border: "none",
                   borderRadius: 8,
                   padding: "10px 12px",
                   marginBottom: 16,
-                  background: "#f3eee6",
+                  background: "#101010",
+                  color: "#f5f2ea",
                 }}
               />
-            </>
-          )}
 
-          <button
-            type="submit"
-            disabled={loading}
-            style={{
-              width: "100%",
-              border: "1px solid #111",
-              background: "#111",
-              color: "#fff",
-              padding: "12px 12px",
-              borderRadius: 8,
-              fontWeight: 600,
-              cursor: "pointer",
-              letterSpacing: "0.06em",
-              textTransform: "uppercase",
-            }}
-          >
-            {loading ? "Please wait..." : mode === "login" ? "Log In" : "Sign Up"}
-          </button>
-        </form>
+              <label
+                htmlFor="password"
+                style={{
+                  display: "block",
+                  fontSize: 12,
+                  marginBottom: 6,
+                  letterSpacing: "0.04em",
+                  textTransform: "uppercase",
+                  color: "#f5f2ea",
+                }}
+              >
+                Password
+              </label>
+              <input
+                id="password"
+                type="password"
+                autoComplete={
+                  mode === "login" ? "current-password" : "new-password"
+                }
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                required
+                style={{
+                  width: "100%",
+                  border: "none",
+                  borderRadius: 8,
+                  padding: "10px 12px",
+                  marginBottom: 16,
+                  background: "#101010",
+                  color: "#f5f2ea",
+                }}
+              />
+              {mode === "signup" && (
+                <>
+                  <label
+                    htmlFor="confirmPassword"
+                    style={{
+                      display: "block",
+                      fontSize: 12,
+                      marginBottom: 6,
+                      letterSpacing: "0.04em",
+                      textTransform: "uppercase",
+                      color: "#f5f2ea",
+                    }}
+                  >
+                    Confirm password
+                  </label>
+                  <input
+                    id="confirmPassword"
+                    type="password"
+                    autoComplete="new-password"
+                    value={confirmPassword}
+                    onChange={(event) => setConfirmPassword(event.target.value)}
+                    required={mode === "signup"}
+                    style={{
+                      width: "100%",
+                      border: "none",
+                      borderRadius: 8,
+                      padding: "10px 12px",
+                      marginBottom: 16,
+                      background: "#101010",
+                      color: "#f5f2ea",
+                    }}
+                  />
+                </>
+              )}
 
-        {status && (
-          <div style={{ marginTop: 12, fontSize: 12, color: "#222" }}>
-            {status}
+              <button
+                type="submit"
+                disabled={loading}
+                style={{
+                  width: "100%",
+                  border: "none",
+                  background: "transparent",
+                  color: "#f5f2ea",
+                  padding: "12px 12px",
+                  borderRadius: 8,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  letterSpacing: "0.06em",
+                  textTransform: "uppercase",
+                }}
+              >
+                {loading
+                  ? "Please wait..."
+                  : mode === "login"
+                    ? "Log In"
+                    : "Sign Up"}
+              </button>
+            </form>
+
+            <div
+              style={{
+                marginTop: 12,
+                fontSize: 12,
+                color: "#f5f2ea",
+                textAlign: "center",
+              }}
+            >
+              <button
+                type="button"
+                onClick={() =>
+                  setMode((prev) => (prev === "login" ? "signup" : "login"))
+                }
+                style={{
+                  border: "none",
+                  background: "transparent",
+                  color: "#f5f2ea",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  letterSpacing: "0.08em",
+                  textTransform: "uppercase",
+                }}
+              >
+                {mode === "login" ? "Sign Up" : "Log In"}
+              </button>
+            </div>
+
+            {status && (
+              <div style={{ marginTop: 12, fontSize: 12, color: "#f5f2ea" }}>
+                {status}
+              </div>
+            )}
           </div>
-        )}
+
         </div>
-      </div>
       </div>
     </div>
   );

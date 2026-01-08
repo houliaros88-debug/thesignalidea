@@ -5,10 +5,10 @@ import { usePathname } from "next/navigation";
 import { useHomeTab } from "./HomeTabContext";
 
 const homeTabs = [
-  { label: "Ideas", icon: "💡" },
-  { label: "Pictures", icon: "🖼️" },
-  { label: "Videos", icon: "🎥" },
-  { label: "Jobs", icon: "💼" },
+  { label: "Ideas" },
+  { label: "Pictures" },
+  { label: "Videos" },
+  { label: "Jobs" },
 ];
 
 export default function HomeHeaderTabs() {
@@ -29,7 +29,6 @@ export default function HomeHeaderTabs() {
             onClick={() => setActiveTab(tab.label)}
           >
             <div className="nyt-divider-category-name">
-              <span style={{ marginRight: 8 }}>{tab.icon}</span>
               {tab.label}
             </div>
           </button>

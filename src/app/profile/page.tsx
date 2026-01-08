@@ -1,121 +1,306 @@
 "use client";
 import Image from "next/image";
-import React, { useState } from "react";
+import { useEffect, useState } from "react";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "../../lib/supabaseClient";
+import IdeaCarousel from "../components/IdeaCarousel";
 
 export default function ProfilePage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const params = useParams();
+  const routeUserId = Array.isArray(params?.id) ? params?.id[0] : params?.id;
   const [activeTab, setActiveTab] = useState('Ideas');
-  const ideas = Array.from({ length: 8 }).map((_, i) => ({
-    id: i + 1,
-    headline: `Idea Headline ${i + 1}`,
-    description:
-      'This is a sample idea description, styled to look like a newspaper article. Replace with real content. The Signal Idea platform allows users to submit innovative ideas, share inspiring stories, and connect with others. Each idea can include details, images, or even videos to help bring the vision to life. Discover trending topics, support your favorite submissions, and see which ideas are making headlines in the community. Stay tuned for more updates and join the conversation!',
-    user: `User ${i + 1}`,
-    date: `2026-01-${String(i + 1).padStart(2, '0')}`,
-    profilePic: `https://randomuser.me/api/portraits/men/${i + 10}.jpg`,
-  }));
-  const pictures = [
-    ...Array(9).fill('https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=400&q=80'),
-    ...Array(9).fill('https://images.unsplash.com/photo-1465101046530-73398c7f28ca?auto=format&fit=crop&w=400&q=80'),
-    ...Array(9).fill('https://images.unsplash.com/photo-1519125323398-675f0ddb6308?auto=format&fit=crop&w=400&q=80'),
-  ];
-  const videos = [
-    ...Array(9).fill('https://www.w3schools.com/html/mov_bbb.mp4'),
-    ...Array(9).fill('https://www.w3schools.com/html/movie.mp4'),
-    ...Array(9).fill('https://www.w3schools.com/html/mov_bbb.mp4'),
-  ];
-  const jobs = Array.from({ length: 9 }).map((_, i) => ({
-    title: `Job Title ${i + 1}`,
-    company: `Company ${i + 1}`,
-    desc: 'This is a sample job description. Replace with real job data. The Signal Idea platform allows users to post and discover job opportunities related to innovative ideas and projects.',
-    date: `2026-01-${String(i + 1).padStart(2, '0')}`,
-  }));
+  const [userName, setUserName] = useState("Your Profile");
+  const [followersCount, setFollowersCount] = useState<number | null>(null);
+  const [followingCount, setFollowingCount] = useState<number | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [viewedUserId, setViewedUserId] = useState<string | null>(null);
+  const [isSelf, setIsSelf] = useState(true);
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [followLoading, setFollowLoading] = useState(false);
+  const [photoUrl, setPhotoUrl] = useState("");
+  const [bio, setBio] = useState("I love my idea you will love it too.");
+  const [shareStatus, setShareStatus] = useState<string | null>(null);
+  const [ideas, setIdeas] = useState<
+    {
+      id: string;
+      title: string | null;
+      description: string | null;
+      photoUrl: string | null;
+      videoUrl: string | null;
+      createdAt: string | null;
+    }[]
+  >([]);
+
+  useEffect(() => {
+    const loadUser = async () => {
+      const { data } = await supabase.auth.getUser();
+      const loggedInUserId = data.user?.id ?? null;
+      setCurrentUserId(loggedInUserId);
+      const paramUserId = searchParams?.get("user");
+      const targetUserId =
+        (typeof routeUserId === "string" && routeUserId) ||
+        paramUserId ||
+        loggedInUserId;
+      setViewedUserId(targetUserId);
+      const viewingSelf =
+        !!loggedInUserId && (!targetUserId || targetUserId === loggedInUserId);
+      setIsSelf(viewingSelf);
+      const fullName =
+        data.user?.user_metadata?.full_name ||
+        data.user?.user_metadata?.name ||
+        data.user?.email ||
+        "Your Profile";
+      const meta = data.user?.user_metadata ?? {};
+      if (viewingSelf) {
+        const loadedBio =
+          typeof meta.bio === "string" && meta.bio.trim().length > 0
+            ? meta.bio
+            : "I love my idea you will love it too.";
+        const loadedPhoto =
+          meta.photo_url ||
+          meta.avatar_url ||
+          "https://randomuser.me/api/portraits/women/21.jpg";
+        setUserName(fullName);
+        setBio(loadedBio);
+        setPhotoUrl(loadedPhoto);
+      } else if (targetUserId) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("full_name,bio,photo_url")
+          .eq("id", targetUserId)
+          .maybeSingle();
+        setUserName(profile?.full_name || "User Profile");
+        setBio(profile?.bio || "");
+        setPhotoUrl(
+          profile?.photo_url ||
+            "https://randomuser.me/api/portraits/women/21.jpg"
+        );
+      }
+
+      if (targetUserId) {
+        const [{ count: followers }, { count: following }] = await Promise.all([
+          supabase
+            .from("follows")
+            .select("id", { count: "exact", head: true })
+            .eq("following_id", targetUserId),
+          supabase
+            .from("follows")
+            .select("id", { count: "exact", head: true })
+            .eq("follower_id", targetUserId),
+        ]);
+        setFollowersCount(followers ?? 0);
+        setFollowingCount(following ?? 0);
+      } else {
+        setFollowersCount(0);
+        setFollowingCount(0);
+      }
+
+      if (loggedInUserId && targetUserId && loggedInUserId !== targetUserId) {
+        const { data: followRow } = await supabase
+          .from("follows")
+          .select("id")
+          .eq("follower_id", loggedInUserId)
+          .eq("following_id", targetUserId)
+          .maybeSingle();
+        setIsFollowing(!!followRow);
+      }
+    };
+    loadUser();
+  }, [searchParams, routeUserId]);
+
+  useEffect(() => {
+    let isActive = true;
+    const loadIdeas = async () => {
+      if (!viewedUserId) {
+        setIdeas([]);
+        return;
+      }
+      const { data, error } = await supabase
+        .from("ideas")
+        .select("id,title,description,photo_url,video_url,created_at")
+        .eq("user_id", viewedUserId)
+        .order("created_at", { ascending: false });
+      if (!isActive) return;
+      if (error) {
+        setIdeas([]);
+        return;
+      }
+      const mapped = (data ?? []).map((idea) => ({
+        id: idea.id,
+        title: idea.title,
+        description: idea.description,
+        photoUrl: idea.photo_url,
+        videoUrl: idea.video_url,
+        createdAt: idea.created_at,
+      }));
+      setIdeas(mapped);
+    };
+    loadIdeas();
+    return () => {
+      isActive = false;
+    };
+  }, [viewedUserId]);
+
+  const formatTimeAgo = (value: string | null) => {
+    if (!value) return "Just now";
+    const created = new Date(value).getTime();
+    const diffMs = Date.now() - created;
+    const diffMins = Math.floor(diffMs / 60000);
+    if (diffMins < 1) return "Just now";
+    if (diffMins < 60) return `${diffMins}m ago`;
+    const diffHours = Math.floor(diffMins / 60);
+    if (diffHours < 24) return `${diffHours}h ago`;
+    const diffDays = Math.floor(diffHours / 24);
+    return `${diffDays}d ago`;
+  };
+
+  const handleFollowToggle = async () => {
+    if (!currentUserId || !viewedUserId) return;
+    setFollowLoading(true);
+    if (isFollowing) {
+      await supabase
+        .from("follows")
+        .delete()
+        .eq("follower_id", currentUserId)
+        .eq("following_id", viewedUserId);
+      setIsFollowing(false);
+      setFollowersCount((count) => Math.max(0, (count ?? 0) - 1));
+    } else {
+      await supabase.from("follows").insert({
+        follower_id: currentUserId,
+        following_id: viewedUserId,
+      });
+      setIsFollowing(true);
+      setFollowersCount((count) => (count ?? 0) + 1);
+    }
+    setFollowLoading(false);
+  };
+
+  const handleShareProfile = async () => {
+    const shareUrl = typeof window !== "undefined" ? window.location.href : "";
+    const shareData = {
+      title: userName || "Profile",
+      text: "Check out this profile on The Signal Idea.",
+      url: shareUrl,
+    };
+    setShareStatus(null);
+
+    if (navigator.share) {
+      try {
+        await navigator.share(shareData);
+        setShareStatus("Shared.");
+        return;
+      } catch (error) {
+        if ((error as DOMException)?.name === "AbortError") {
+          return;
+        }
+      }
+    }
+
+    if (navigator.clipboard && shareUrl) {
+      try {
+        await navigator.clipboard.writeText(shareUrl);
+        setShareStatus("Link copied.");
+      } catch {
+        setShareStatus("Could not copy the link.");
+      }
+    } else if (shareUrl) {
+      setShareStatus(shareUrl);
+    }
+  };
+  const pictures: string[] = [];
+  const videos: string[] = [];
+  const jobs: {
+    title: string;
+    company: string;
+    desc: string;
+    date: string;
+  }[] = [];
 
   return (
     <div className="nyt-main" style={{ display: 'block', maxWidth: 900, margin: '32px auto', padding: '0 16px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 24, marginBottom: 24 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
-          <Image
-            src="https://randomuser.me/api/portraits/women/21.jpg"
+          <img
+            src={photoUrl || "https://randomuser.me/api/portraits/women/21.jpg"}
             alt="Profile"
             width={96}
             height={128}
-            style={{ width: 96, height: 128, borderRadius: 0, objectFit: 'cover', background: '#eee' }}
+            style={{ width: 96, height: 128, borderRadius: 24, objectFit: 'cover', background: '#111' }}
           />
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+            <div style={{ fontSize: 20, fontWeight: 700, color: '#111', marginBottom: 8 }}>
+              {userName}
+            </div>
             <div style={{ display: 'flex', gap: 16, textAlign: 'center' }}>
               <div>
-                <div style={{ fontSize: 18, fontWeight: 700, color: '#111' }}>1,248</div>
+                <div style={{ fontSize: 18, fontWeight: 700, color: '#111' }}>
+                  {followersCount ?? 0}
+                </div>
                 <div style={{ fontSize: 12, color: '#666', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Followers</div>
               </div>
               <div>
-                <div style={{ fontSize: 18, fontWeight: 700, color: '#111' }}>342</div>
+                <div style={{ fontSize: 18, fontWeight: 700, color: '#111' }}>
+                  {followingCount ?? 0}
+                </div>
                 <div style={{ fontSize: 12, color: '#666', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Following</div>
               </div>
               <div>
-                <div style={{ fontSize: 18, fontWeight: 700, color: '#111' }}>5,920</div>
+                <div style={{ fontSize: 18, fontWeight: 700, color: '#111' }}>0</div>
                 <div style={{ fontSize: 12, color: '#666', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Signals</div>
               </div>
             </div>
             <div style={{ marginTop: 12 }}>
-              <textarea
-                id="profile-bio"
-                rows={3}
-                defaultValue="I love my idea you will love it too."
-                placeholder="Write a short bio about yourself..."
-                style={{
-                  width: 320,
-                  maxWidth: '100%',
-                  border: 'none',
-                borderRadius: 6,
-                background: 'transparent',
-                padding: '8px 10px',
-                fontFamily: 'Georgia, Times New Roman, Times, serif',
-                fontSize: 14,
-                color: '#222',
-                resize: 'none',
-                overflow: 'hidden',
-                WebkitAppearance: 'none',
-              }}
-            />
+              <div style={{ width: 320, maxWidth: '100%', fontSize: 14, color: '#222', lineHeight: 1.6 }}>
+                {bio}
+              </div>
             </div>
           </div>
         </div>
         <div style={{ display: 'flex', gap: 12 }}>
+          {isSelf && (
+            <button
+              type="button"
+              onClick={() => router.push("/create")}
+              style={{
+                border: '1px solid #111',
+                background: 'transparent',
+                padding: '6px 12px',
+                borderRadius: 6,
+                fontSize: 13,
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
+            >
+              Upload
+            </button>
+          )}
+          {isSelf && (
+            <button
+              type="button"
+              onClick={() => router.push("/profile/edit")}
+              style={{
+                border: '1px solid #111',
+                background: 'transparent',
+                padding: '6px 12px',
+                borderRadius: 6,
+                fontSize: 13,
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
+            >
+              Edit Profile
+            </button>
+          )}
           <button
             type="button"
+            onClick={handleShareProfile}
             style={{
               border: '1px solid #111',
               background: 'transparent',
-              padding: '6px 12px',
-              borderRadius: 6,
-              fontSize: 13,
-              fontWeight: 600,
-              cursor: 'pointer',
-            }}
-          >
-            Create
-          </button>
-          <button
-            type="button"
-            style={{
-              border: '1px solid #111',
-              background: 'transparent',
-              padding: '6px 12px',
-              borderRadius: 6,
-              fontSize: 13,
-              fontWeight: 600,
-              cursor: 'pointer',
-            }}
-          >
-            Edit Profile
-          </button>
-          <button
-            type="button"
-            style={{
-              border: '1px solid #111',
-              background: '#111',
-              color: '#fff',
+              color: '#111',
               padding: '6px 12px',
               borderRadius: 6,
               fontSize: 13,
@@ -125,25 +310,51 @@ export default function ProfilePage() {
           >
             Share Profile
           </button>
-          <button
-            type="button"
-            onClick={async () => {
-              await supabase.auth.signOut({ scope: "local" });
-              window.location.assign("/login");
-            }}
-            style={{
-              border: '1px solid #111',
-              background: 'transparent',
-              padding: '6px 12px',
-              borderRadius: 6,
-              fontSize: 13,
-              fontWeight: 600,
-              cursor: 'pointer',
-            }}
-          >
-            Log Out
-          </button>
+          {!isSelf && (
+            <button
+              type="button"
+              onClick={handleFollowToggle}
+              disabled={followLoading}
+              style={{
+                border: '1px solid #111',
+                background: isFollowing ? '#111' : 'transparent',
+                color: isFollowing ? '#fff' : '#111',
+                padding: '6px 12px',
+                borderRadius: 6,
+                fontSize: 13,
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
+            >
+              {followLoading ? 'Please wait...' : isFollowing ? 'Unfollow' : 'Follow'}
+            </button>
+          )}
+          {isSelf && (
+            <button
+              type="button"
+              onClick={async () => {
+                await supabase.auth.signOut({ scope: "local" });
+                window.location.assign("/login");
+              }}
+              style={{
+                border: '1px solid #111',
+                background: 'transparent',
+                padding: '6px 12px',
+                borderRadius: 6,
+                fontSize: 13,
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
+            >
+              Log Out
+            </button>
+          )}
         </div>
+        {shareStatus && (
+          <div style={{ marginTop: 8, fontSize: 12, color: '#444' }}>
+            {shareStatus}
+          </div>
+        )}
       </div>
       <div style={{ display: 'flex', gap: 24, justifyContent: 'center', marginBottom: 32 }}>
         {[
@@ -178,6 +389,11 @@ export default function ProfilePage() {
       </div>
       {activeTab === 'Ideas' && (
         <div style={{ display: 'grid', gap: 16, marginTop: 16 }}>
+          {ideas.length === 0 && (
+            <div style={{ fontSize: 14, color: '#444' }}>
+              No ideas yet.
+            </div>
+          )}
           {ideas.map((idea) => (
             <div
               key={idea.id}
@@ -191,30 +407,33 @@ export default function ProfilePage() {
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
-                <Image
-                  src={idea.profilePic}
+                <img
+                  src={photoUrl || "https://randomuser.me/api/portraits/women/21.jpg"}
                   alt="Profile"
                   width={36}
                   height={54}
                   style={{
                     width: 36,
                     height: 54,
-                    borderRadius: 0,
+                    borderRadius: 24,
                     objectFit: 'cover',
                     border: '1.5px solid #bbb',
-                    background: '#eee',
+                    background: '#111',
                     marginRight: 10,
                   }}
                 />
                 <div style={{ fontWeight: 'bold', fontSize: 18, textTransform: 'uppercase', letterSpacing: '0.04em', color: '#222' }}>
-                  {idea.headline}
+                  {idea.title || "Untitled idea"}
                 </div>
               </div>
-              <div style={{ fontSize: 16, color: '#444', marginBottom: 8 }}>
-                {idea.description}
-              </div>
+              <IdeaCarousel
+                description={idea.description || ""}
+                photoUrl={idea.photoUrl}
+                videoUrl={idea.videoUrl}
+                title={idea.title || "Untitled idea"}
+              />
               <div style={{ fontSize: 13, color: '#888', fontStyle: 'italic', marginTop: 8, textAlign: 'right' }}>
-                Posted by {idea.user} on {idea.date}
+                Posted by {userName} • {formatTimeAgo(idea.createdAt)}
               </div>
             </div>
           ))}
@@ -235,7 +454,7 @@ export default function ProfilePage() {
               width={400}
               height={320}
               sizes="(max-width: 768px) 100vw, 33vw"
-              style={{ width: '100%', height: 320, objectFit: 'cover', borderRadius: 8 }}
+              style={{ width: '100%', height: 320, objectFit: 'cover', borderRadius: 24 }}
             />
           ))}
         </div>
@@ -252,7 +471,7 @@ export default function ProfilePage() {
               key={i}
               src={src}
               controls
-              style={{ width: '100%', height: 320, objectFit: 'cover', borderRadius: 8, background: '#000' }}
+              style={{ width: '100%', height: 320, objectFit: 'cover', borderRadius: 24, background: '#000' }}
             />
           ))}
         </div>
