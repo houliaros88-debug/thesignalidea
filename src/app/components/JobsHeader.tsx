@@ -59,7 +59,7 @@ export default function JobsHeader() {
       const { data } = await supabase.auth.getUser();
       const user = data.user;
       const meta = data.user?.user_metadata ?? {};
-      let resolvedAccountType =
+      let resolvedAccountType: "private" | "business" =
         meta.account_type === "business" ? "business" : "private";
       if (user?.id) {
         const { data: profileData, error: profileError } = await supabase
