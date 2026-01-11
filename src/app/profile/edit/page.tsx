@@ -194,7 +194,7 @@ export default function EditProfilePage() {
             <input
               id="photoUrl"
               type="url"
-              value={photoUrl}
+              value={photoUrl ?? ""}
               onChange={(event) => setPhotoUrl(event.target.value)}
               placeholder="https://"
               style={{
