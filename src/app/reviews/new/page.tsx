@@ -54,7 +54,7 @@ export default function NewReviewPage() {
         return;
       }
       const meta = user.user_metadata ?? {};
-      let resolvedAccountType =
+      let resolvedAccountType: "private" | "business" =
         meta.account_type === "business" ? "business" : "private";
       const { data: profileData, error: profileError } = await supabase
         .from("profiles")
