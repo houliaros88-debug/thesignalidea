@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { supabase } from "../../lib/supabaseClient";
 
 export const carouselHeight = "min(130vh, 1200px)";
@@ -12,8 +13,11 @@ export default function IdeaCarousel({
   videoUrl,
   title,
   ideaId,
+  entityType = "idea",
+  updates = [],
   userName,
   userPhotoUrl,
+  userId,
   timeLabel,
 }: {
   description: string;
@@ -21,11 +25,21 @@ export default function IdeaCarousel({
   videoUrl?: string | null;
   title: string;
   ideaId?: string | null;
+  entityType?: "idea" | "update";
+  updates?: Array<{
+    id: string;
+    description: string;
+    photoUrl?: string | null;
+    videoUrl?: string | null;
+    createdAt?: string | null;
+  }>;
   userName?: string | null;
   userPhotoUrl?: string | null;
+  userId?: string | null;
   timeLabel?: string | null;
 }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const router = useRouter();
   const [activeIndex, setActiveIndex] = useState(0);
   const [videoProgress, setVideoProgress] = useState(0);
   const [liked, setLiked] = useState(false);
@@ -64,29 +78,46 @@ export default function IdeaCarousel({
     display: "grid",
     placeItems: "center",
   };
+  const entityId = ideaId;
+  const tables =
+    entityType === "update"
+      ? {
+          likes: "idea_update_likes",
+          comments: "idea_update_comments",
+          views: "idea_update_views",
+          viewEvents: "idea_update_view_events",
+          idField: "update_id",
+        }
+      : {
+          likes: "idea_likes",
+          comments: "idea_comments",
+          views: "idea_views",
+          viewEvents: "idea_view_events",
+          idField: "idea_id",
+        };
 
   useEffect(() => {
     hasRecordedUniqueView.current = false;
     hasRecordedTotalView.current = false;
-  }, [ideaId]);
+  }, [entityId, entityType]);
 
   useEffect(() => {
     let isActive = true;
     const loadViewCounts = async () => {
-      if (!ideaId) {
+      if (!entityId) {
         setViewCountUnique(0);
         setViewCountTotal(0);
         return;
       }
       const [uniqueRes, totalRes] = await Promise.all([
         supabase
-          .from("idea_views")
+          .from(tables.views)
           .select("id", { count: "exact", head: true })
-          .eq("idea_id", ideaId),
+          .eq(tables.idField, entityId),
         supabase
-          .from("idea_view_events")
+          .from(tables.viewEvents)
           .select("id", { count: "exact", head: true })
-          .eq("idea_id", ideaId),
+          .eq(tables.idField, entityId),
       ]);
       if (!isActive) return;
       if (uniqueRes.error) {
@@ -104,24 +135,24 @@ export default function IdeaCarousel({
     return () => {
       isActive = false;
     };
-  }, [ideaId]);
+  }, [entityId, entityType]);
 
   useEffect(() => {
     let isActive = true;
     const recordUniqueView = async () => {
-      if (!ideaId || !currentUser?.id || hasRecordedUniqueView.current) return;
+      if (!entityId || !currentUser?.id || hasRecordedUniqueView.current) return;
       hasRecordedUniqueView.current = true;
       const { error } = await supabase
-        .from("idea_views")
+        .from(tables.views)
         .upsert(
-          { idea_id: ideaId, user_id: currentUser.id },
-          { onConflict: "idea_id,user_id", ignoreDuplicates: true }
+          { [tables.idField]: entityId, user_id: currentUser.id },
+          { onConflict: `${tables.idField},user_id`, ignoreDuplicates: true }
         );
       if (error) return;
       const { count } = await supabase
-        .from("idea_views")
+        .from(tables.views)
         .select("id", { count: "exact", head: true })
-        .eq("idea_id", ideaId);
+        .eq(tables.idField, entityId);
       if (!isActive) return;
       if (typeof count === "number") {
         setViewCountUnique(count);
@@ -131,15 +162,15 @@ export default function IdeaCarousel({
     return () => {
       isActive = false;
     };
-  }, [ideaId, currentUser?.id]);
+  }, [entityId, entityType, currentUser?.id]);
 
   useEffect(() => {
     let isActive = true;
     const recordTotalView = async () => {
-      if (!ideaId || !currentUser?.id || hasRecordedTotalView.current) return;
+      if (!entityId || !currentUser?.id || hasRecordedTotalView.current) return;
       hasRecordedTotalView.current = true;
-      const { error } = await supabase.from("idea_view_events").insert({
-        idea_id: ideaId,
+      const { error } = await supabase.from(tables.viewEvents).insert({
+        [tables.idField]: entityId,
         user_id: currentUser.id,
       });
       if (error) return;
@@ -150,7 +181,7 @@ export default function IdeaCarousel({
     return () => {
       isActive = false;
     };
-  }, [ideaId, currentUser?.id]);
+  }, [entityId, entityType, currentUser?.id]);
 
   const formatTimeAgo = (value: string | null) => {
     if (!value) return "Just now";
@@ -200,15 +231,15 @@ export default function IdeaCarousel({
   useEffect(() => {
     let isActive = true;
     const loadLikes = async () => {
-      if (!ideaId) {
+      if (!entityId) {
         setLikeCount(0);
         setLiked(false);
         return;
       }
       const { count, error } = await supabase
-        .from("idea_likes")
+        .from(tables.likes)
         .select("id", { count: "exact", head: true })
-        .eq("idea_id", ideaId);
+        .eq(tables.idField, entityId);
       if (!isActive) return;
       if (error) {
         setLikeCount(0);
@@ -217,9 +248,9 @@ export default function IdeaCarousel({
       setLikeCount(count ?? 0);
       if (currentUser?.id) {
         const { data } = await supabase
-          .from("idea_likes")
+          .from(tables.likes)
           .select("id")
-          .eq("idea_id", ideaId)
+          .eq(tables.idField, entityId)
           .eq("user_id", currentUser.id)
           .maybeSingle();
         if (!isActive) return;
@@ -232,19 +263,19 @@ export default function IdeaCarousel({
     return () => {
       isActive = false;
     };
-  }, [ideaId, currentUser?.id]);
+  }, [entityId, entityType, currentUser?.id]);
 
   useEffect(() => {
     let isActive = true;
     const loadComments = async () => {
-      if (!ideaId) {
+      if (!entityId) {
         setComments([]);
         return;
       }
       const { data, error } = await supabase
-        .from("idea_comments")
-        .select("id, idea_id, user_id, body, created_at")
-        .eq("idea_id", ideaId)
+        .from(tables.comments)
+        .select("id, user_id, body, created_at")
+        .eq(tables.idField, entityId)
         .order("created_at", { ascending: false });
       if (!isActive) return;
       if (error) {
@@ -287,7 +318,7 @@ export default function IdeaCarousel({
     return () => {
       isActive = false;
     };
-  }, [ideaId]);
+  }, [entityId, entityType]);
 
   const updateActive = () => {
     if (!containerRef.current) return;
@@ -315,9 +346,19 @@ export default function IdeaCarousel({
   };
 
   const showBadge = Boolean(userName || userPhotoUrl);
-  const initial = (userName ?? "").trim().slice(0, 1).toUpperCase() || "U";
+  const profileHref = userId ? `/profile/${userId}` : null;
+  const photoFallbackLabel = "No\nPhoto";
   const authorBadge = showBadge ? (
-    <div
+    <button
+      type="button"
+      onClick={(event) => {
+        if (!profileHref) return;
+        event.stopPropagation();
+        router.push(profileHref);
+      }}
+      aria-label={
+        profileHref ? `View ${userName ?? "user"} profile` : undefined
+      }
       style={{
         position: "absolute",
         top: 14,
@@ -329,7 +370,10 @@ export default function IdeaCarousel({
         borderRadius: 999,
         background: "transparent",
         border: "none",
-        pointerEvents: "none",
+        pointerEvents: profileHref ? "auto" : "none",
+        cursor: profileHref ? "pointer" : "default",
+        textAlign: "left",
+        appearance: "none",
       }}
     >
       {userPhotoUrl ? (
@@ -341,7 +385,7 @@ export default function IdeaCarousel({
             height: 36,
             borderRadius: 14,
             objectFit: "cover",
-            background: "#111",
+            background: "var(--surface)",
           }}
         />
       ) : (
@@ -350,16 +394,20 @@ export default function IdeaCarousel({
             width: 36,
             height: 36,
             borderRadius: 14,
-            background: "#111",
+            background: "var(--surface)",
             display: "grid",
             placeItems: "center",
-            fontSize: 13,
+            fontSize: 9,
             fontWeight: 600,
-            letterSpacing: "0.2em",
+            letterSpacing: "0.08em",
             textTransform: "uppercase",
+            whiteSpace: "pre-line",
+            textAlign: "center",
+            lineHeight: 1.1,
+            color: "rgba(58, 43, 36, 0.7)",
           }}
         >
-          {initial}
+          {photoFallbackLabel}
         </div>
       )}
       <div style={{ display: "grid", gap: 2 }}>
@@ -369,8 +417,7 @@ export default function IdeaCarousel({
             letterSpacing: "0.16em",
             textTransform: "uppercase",
             fontWeight: 700,
-            textShadow:
-              "0 0 6px rgba(255, 255, 255, 0.7), 0 0 14px rgba(255, 255, 255, 0.45)",
+            textShadow: "0 0 12px rgba(194, 122, 82, 0.35)",
           }}
         >
           {userName ?? "User"}
@@ -388,7 +435,7 @@ export default function IdeaCarousel({
           </span>
         )}
       </div>
-    </div>
+    </button>
   ) : null;
 
   const handleCommentSubmit = async (
@@ -397,11 +444,11 @@ export default function IdeaCarousel({
     event.preventDefault();
     const trimmed = commentText.trim();
     if (!trimmed) return;
-    if (!ideaId || !currentUser) return;
+    if (!entityId || !currentUser) return;
     const { data, error } = await supabase
-      .from("idea_comments")
+      .from(tables.comments)
       .insert({
-        idea_id: ideaId,
+        [tables.idField]: entityId,
         user_id: currentUser.id,
         body: trimmed,
       })
@@ -423,10 +470,10 @@ export default function IdeaCarousel({
   };
 
   const addLike = async () => {
-    if (!ideaId || !currentUser?.id || likePending || liked) return;
+    if (!entityId || !currentUser?.id || likePending || liked) return;
     setLikePending(true);
-    const { error } = await supabase.from("idea_likes").insert({
-      idea_id: ideaId,
+    const { error } = await supabase.from(tables.likes).insert({
+      [tables.idField]: entityId,
       user_id: currentUser.id,
     });
     if (!error) {
@@ -437,12 +484,12 @@ export default function IdeaCarousel({
   };
 
   const removeLike = async () => {
-    if (!ideaId || !currentUser?.id || likePending || !liked) return;
+    if (!entityId || !currentUser?.id || likePending || !liked) return;
     setLikePending(true);
     const { error } = await supabase
-      .from("idea_likes")
+      .from(tables.likes)
       .delete()
-      .eq("idea_id", ideaId)
+      .eq(tables.idField, entityId)
       .eq("user_id", currentUser.id);
     if (!error) {
       setLiked(false);
@@ -555,14 +602,14 @@ export default function IdeaCarousel({
             ...controlButtonStyle,
             padding: 0,
             cursor: "pointer",
-            color: "#fff",
+            color: "var(--paper)",
           }}
         >
           <svg width="26" height="26" viewBox="0 0 24 24" aria-hidden="true">
             <path
               d="M12 20.25c-4.2-2.4-7.5-5.7-7.5-9.3 0-2.4 1.8-4.2 4.2-4.2 1.5 0 2.7.6 3.3 1.8.6-1.2 1.8-1.8 3.3-1.8 2.4 0 4.2 1.8 4.2 4.2 0 3.6-3.3 6.9-7.5 9.3z"
-              fill={liked ? "#fff" : "none"}
-              stroke="#fff"
+              fill={liked ? "currentColor" : "none"}
+              stroke="currentColor"
               strokeWidth="1.5"
             />
           </svg>
@@ -587,14 +634,14 @@ export default function IdeaCarousel({
             ...controlButtonStyle,
             padding: 0,
             cursor: "pointer",
-            color: "#fff",
+            color: "var(--paper)",
           }}
         >
           <svg width="26" height="26" viewBox="0 0 24 24" aria-hidden="true">
             <path
               d="M4 5h16v10H7l-3 3V5z"
               fill="none"
-              stroke="#fff"
+              stroke="currentColor"
               strokeWidth="1.5"
               strokeLinejoin="round"
             />
@@ -614,7 +661,7 @@ export default function IdeaCarousel({
         <div
           style={{
             ...controlButtonStyle,
-            color: "#fff",
+            color: "var(--paper)",
           }}
           aria-hidden="true"
           title="Unique views"
@@ -623,10 +670,10 @@ export default function IdeaCarousel({
             <path
               d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6z"
               fill="none"
-              stroke="#fff"
+              stroke="currentColor"
               strokeWidth="1.5"
             />
-            <circle cx="12" cy="12" r="3" fill="none" stroke="#fff" strokeWidth="1.5" />
+            <circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" strokeWidth="1.5" />
           </svg>
         </div>
         <span
@@ -643,7 +690,7 @@ export default function IdeaCarousel({
         <div
           style={{
             ...controlButtonStyle,
-            color: "#fff",
+            color: "var(--paper)",
           }}
           aria-hidden="true"
           title="Total views"
@@ -652,14 +699,14 @@ export default function IdeaCarousel({
             <path
               d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6z"
               fill="none"
-              stroke="#fff"
+              stroke="currentColor"
               strokeWidth="1.5"
             />
-            <circle cx="12" cy="12" r="3" fill="none" stroke="#fff" strokeWidth="1.5" />
+            <circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" strokeWidth="1.5" />
             <path
               d="M8 12h8"
               fill="none"
-              stroke="#fff"
+              stroke="currentColor"
               strokeWidth="1.5"
               strokeLinecap="round"
             />
@@ -685,21 +732,21 @@ export default function IdeaCarousel({
             ...controlButtonStyle,
             padding: 0,
             cursor: "pointer",
-            color: "#fff",
+            color: "var(--paper)",
           }}
         >
           <svg width="26" height="26" viewBox="0 0 24 24" aria-hidden="true">
             <path
               d="M7 10v7a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-7"
               fill="none"
-              stroke="#fff"
+              stroke="currentColor"
               strokeWidth="1.5"
               strokeLinejoin="round"
             />
             <path
               d="M12 16V4m0 0l-3 3m3-3l3 3"
               fill="none"
-              stroke="#fff"
+              stroke="currentColor"
               strokeWidth="1.5"
               strokeLinejoin="round"
               strokeLinecap="round"
@@ -727,8 +774,8 @@ export default function IdeaCarousel({
         right: 0,
         bottom: 0,
         height: panelOpen ? "50%" : "0%",
-        background: "#000",
-        borderTop: "1px solid rgba(255, 255, 255, 0.2)",
+        background: "rgba(61, 47, 40, 0.92)",
+        borderTop: "1px solid var(--rule-light)",
         overflow: "hidden",
         transition: "height 0.25s ease",
         pointerEvents: panelOpen ? "auto" : "none",
@@ -771,7 +818,7 @@ export default function IdeaCarousel({
                     height: 28,
                     borderRadius: 10,
                     objectFit: "cover",
-                    background: "#111",
+                    background: "var(--surface)",
                   }}
                 />
               ) : (
@@ -780,16 +827,20 @@ export default function IdeaCarousel({
                     width: 28,
                     height: 28,
                     borderRadius: 10,
-                    background: "#111",
+                    background: "var(--surface)",
                     display: "grid",
                     placeItems: "center",
-                    fontSize: 11,
+                    fontSize: 8,
                     fontWeight: 600,
                     textTransform: "uppercase",
-                    letterSpacing: "0.08em",
+                    letterSpacing: "0.06em",
+                    whiteSpace: "pre-line",
+                    textAlign: "center",
+                    lineHeight: 1.1,
+                    color: "rgba(58, 43, 36, 0.7)",
                   }}
                 >
-                  {comment.userName.trim().slice(0, 1) || "U"}
+                  {photoFallbackLabel}
                 </div>
               )}
               <div style={{ display: "grid", gap: 4 }}>
@@ -818,7 +869,7 @@ export default function IdeaCarousel({
             display: "flex",
             gap: 8,
             padding: "12px 16px 16px",
-            borderTop: "1px solid rgba(255, 255, 255, 0.15)",
+            borderTop: "1px solid var(--rule-light)",
           }}
         >
           <input
@@ -828,24 +879,24 @@ export default function IdeaCarousel({
             placeholder={
               currentUser ? "Add a comment" : "Log in to comment"
             }
-            disabled={!currentUser || !ideaId}
+            disabled={!currentUser || !entityId}
             style={{
               flex: 1,
               borderRadius: 999,
-              border: "1px solid rgba(255, 255, 255, 0.3)",
+              border: "1px solid var(--rule-light)",
               background: "transparent",
               padding: "8px 12px",
               fontSize: 12,
-              color: "#fff",
+              color: "var(--paper)",
               outline: "none",
               opacity: currentUser ? 1 : 0.6,
             }}
           />
           <button
             type="submit"
-            disabled={!currentUser || !ideaId}
+            disabled={!currentUser || !entityId}
             style={{
-              border: "1px solid rgba(255, 255, 255, 0.35)",
+              border: "1px solid var(--rule-light)",
               background: "transparent",
               borderRadius: 999,
               padding: "8px 12px",
@@ -853,7 +904,7 @@ export default function IdeaCarousel({
               letterSpacing: "0.18em",
               textTransform: "uppercase",
               cursor: "pointer",
-              color: "#fff",
+              color: "var(--paper)",
               opacity: currentUser ? 1 : 0.6,
             }}
           >
@@ -872,8 +923,8 @@ export default function IdeaCarousel({
         right: 0,
         bottom: 0,
         height: panelOpen ? "50%" : "0%",
-        background: "#000",
-        borderTop: "1px solid rgba(255, 255, 255, 0.2)",
+        background: "rgba(61, 47, 40, 0.92)",
+        borderTop: "1px solid var(--rule-light)",
         overflow: "hidden",
         transition: "height 0.25s ease",
         pointerEvents: panelOpen ? "auto" : "none",
@@ -896,7 +947,7 @@ export default function IdeaCarousel({
             type="button"
             onClick={handleShare}
             style={{
-              border: "1px solid rgba(255, 255, 255, 0.35)",
+              border: "1px solid var(--rule-light)",
               background: "transparent",
               borderRadius: 999,
               padding: "10px 16px",
@@ -904,7 +955,7 @@ export default function IdeaCarousel({
               letterSpacing: "0.18em",
               textTransform: "uppercase",
               cursor: "pointer",
-              color: "#fff",
+              color: "var(--paper)",
             }}
           >
             Share Link
@@ -924,7 +975,7 @@ export default function IdeaCarousel({
               }
             }}
             style={{
-              border: "1px solid rgba(255, 255, 255, 0.35)",
+              border: "1px solid var(--rule-light)",
               background: "transparent",
               borderRadius: 999,
               padding: "10px 16px",
@@ -932,7 +983,7 @@ export default function IdeaCarousel({
               letterSpacing: "0.18em",
               textTransform: "uppercase",
               cursor: "pointer",
-              color: "#fff",
+              color: "var(--paper)",
             }}
           >
             Copy Link
@@ -944,7 +995,7 @@ export default function IdeaCarousel({
           style={{
             border: "none",
             background: "transparent",
-            color: "rgba(255, 255, 255, 0.6)",
+            color: "rgba(253, 247, 239, 0.7)",
             fontSize: 12,
             letterSpacing: "0.2em",
             textTransform: "uppercase",
@@ -956,6 +1007,27 @@ export default function IdeaCarousel({
       </div>
     </div>
   );
+
+  const entries = [
+    {
+      key: `main-${entityId ?? "idea"}`,
+      description,
+      photoUrl,
+      videoUrl,
+    },
+    ...updates.map((update) => ({
+      key: update.id,
+      description: update.description,
+      photoUrl: update.photoUrl ?? null,
+      videoUrl: update.videoUrl ?? null,
+    })),
+  ];
+
+  const slides = entries.flatMap((entry) => [
+    { key: `${entry.key}-text`, kind: "text" as const, entry },
+    { key: `${entry.key}-photo`, kind: "photo" as const, entry },
+    { key: `${entry.key}-video`, kind: "video" as const, entry },
+  ]);
 
   return (
     <div style={{ marginTop: 12, display: "flex", justifyContent: "center" }}>
@@ -973,9 +1045,12 @@ export default function IdeaCarousel({
             WebkitOverflowScrolling: "touch",
           }}
         >
-          {([0, 1, 2] as const).map((slideIndex) => {
+          {slides.map((slide, slideIndex) => {
             const panelOpen =
               activeIndex === slideIndex && (isCommentOpen || isShareOpen);
+            const isText = slide.kind === "text";
+            const isPhoto = slide.kind === "photo";
+            const isVideo = slide.kind === "video";
             const contentHeight = panelOpen ? "50%" : "100%";
             const contentStyle = {
               height: contentHeight,
@@ -990,45 +1065,47 @@ export default function IdeaCarousel({
               flex: "0 0 100%",
               height: "100%",
               borderRadius: 24,
-              border: "1px solid rgba(255, 255, 255, 0.2)",
-              background: slideIndex === 0 ? "#0f0f0f" : "#111",
+              border: "1px solid var(--rule-light)",
+              background: isText ? "var(--paper)" : "rgba(61, 47, 40, 0.08)",
               scrollSnapAlign: "start",
               position: "relative" as const,
               overflow: "hidden",
             };
 
+            const textValue = slide.entry.description?.trim();
+
             return (
-              <div key={slideIndex} style={slideBase}>
+              <div key={slide.key} style={slideBase}>
                 {authorBadge}
                 {renderControls(panelOpen)}
                 <div
-                  style={{ ...contentStyle, padding: slideIndex === 0 ? 20 : 0 }}
+                  style={{ ...contentStyle, padding: isText ? 20 : 0 }}
                   onClick={() => {
                     if (panelOpen) {
                       handleClosePanels();
                     }
                   }}
-                  onDoubleClick={slideIndex === 0 ? handleLikeOnce : undefined}
+                  onDoubleClick={isText ? handleLikeOnce : undefined}
                 >
-                  {slideIndex === 0 && (
+                  {isText && (
                     <div
                       onDoubleClick={handleLikeOnce}
                       style={{
                         fontSize: 15,
-                        color: "#fff",
+                        color: "var(--ink)",
                         lineHeight: 1.6,
                         textAlign: "center",
                         padding: 20,
                       }}
                     >
-                      {description}
+                      {textValue || "No text"}
                     </div>
                   )}
-                  {slideIndex === 1 && (
+                  {isPhoto && (
                     <>
-                      {photoUrl ? (
+                      {slide.entry.photoUrl ? (
                         <img
-                          src={photoUrl}
+                          src={slide.entry.photoUrl}
                           alt={title}
                           onDoubleClick={handleLikeOnce}
                           style={{
@@ -1051,12 +1128,12 @@ export default function IdeaCarousel({
                       )}
                     </>
                   )}
-                  {slideIndex === 2 && (
+                  {isVideo && (
                     <>
-                      {videoUrl ? (
+                      {slide.entry.videoUrl ? (
                         <>
                           <video
-                            src={videoUrl}
+                            src={slide.entry.videoUrl}
                             autoPlay
                             muted
                             loop
@@ -1089,7 +1166,7 @@ export default function IdeaCarousel({
                                   100,
                                   Math.max(0, videoProgress * 100)
                                 )}%`,
-                                background: "#fff",
+                                background: "var(--accent-strong)",
                                 transition: "width 0.1s linear",
                               }}
                             />
@@ -1123,17 +1200,17 @@ export default function IdeaCarousel({
             marginTop: 10,
           }}
         >
-          {[0, 1, 2].map((index) => (
+          {slides.map((slide, index) => (
             <span
-              key={index}
+              key={slide.key}
               style={{
                 width: 6,
                 height: 6,
                 borderRadius: 999,
                 background:
                   activeIndex === index
-                    ? "#fff"
-                    : "rgba(255, 255, 255, 0.35)",
+                    ? "var(--accent-strong)"
+                    : "var(--rule-light)",
                 display: "inline-block",
               }}
             />

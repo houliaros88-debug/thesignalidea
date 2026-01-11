@@ -1,105 +1,181 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
-import Image from "next/image";
+import { supabase } from "../../lib/supabaseClient";
+import {
+  businessCategories,
+  businessCategoryImages,
+} from "../data/businessCategories";
 
-const categories = [
-  "Food & Drinks",
-  "Fashion",
-  "Technology",
-  "Beauty & Cosmetics",
-  "Health & Wellness",
-  "Finance & Fintech",
-  "Real Estate",
-  "Education",
-  "Travel & Hospitality",
-  "Media & Entertainment",
-  "Retail & Ecommerce",
-  "Transportation & Mobility",
-  "Sustainability & Green Tech",
-  "Sports & Fitness",
-  "Home & Living",
-  "Gaming",
-  "Marketing & Advertising",
-  "HR & Recruitment",
-];
+const BUSINESS_FREE_QUOTA = 2000;
+const ANNOUNCEMENT_FEE_EUR = 2;
 
-const categoryImages: Record<string, string> = {
-  "Food & Drinks":
-    "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?auto=format&fit=crop&w=800&q=80",
-  Fashion:
-    "https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=800&q=80",
-  Technology:
-    "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=800&q=80",
-  "Beauty & Cosmetics":
-    "https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?auto=format&fit=crop&w=800&q=80",
-  "Health & Wellness":
-    "https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?auto=format&fit=crop&w=800&q=80",
-  "Finance & Fintech":
-    "https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=800&q=80",
-  "Real Estate":
-    "https://images.unsplash.com/photo-1501183638710-841dd1904471?auto=format&fit=crop&w=800&q=80",
-  Education:
-    "https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?auto=format&fit=crop&w=800&q=80",
-  "Travel & Hospitality":
-    "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=800&q=80",
-  "Media & Entertainment":
-    "https://images.unsplash.com/photo-1497032628192-86f99bcd76bc?auto=format&fit=crop&w=800&q=80",
-  "Retail & Ecommerce":
-    "https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=800&q=80",
-  "Transportation & Mobility":
-    "https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=800&q=80",
-  "Sustainability & Green Tech":
-    "https://images.unsplash.com/photo-1469474968028-56623f02e42e?auto=format&fit=crop&w=800&q=80",
-  "Sports & Fitness":
-    "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?auto=format&fit=crop&w=800&q=80",
-  "Home & Living":
-    "https://images.unsplash.com/photo-1505691938895-1758d7feb511?auto=format&fit=crop&w=800&q=80",
-  Gaming:
-    "https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&w=800&q=80",
-  "Marketing & Advertising":
-    "https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&w=800&q=80",
-  "HR & Recruitment":
-    "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=800&q=80",
+type PartnerListing = {
+  id: string;
+  user_id: string;
+  category: string;
+  title: string | null;
+  description: string;
+  image_url: string | null;
+  created_at: string;
 };
-
-const shareOptions = [50, 40, 35, 30];
-
-const listingsByCategory = Object.fromEntries(
-  categories.map((category) => [
-    category,
-    shareOptions.map((share, index) => ({
-      id: `${category}-${share}-${index}`,
-      category,
-      image: categoryImages[category],
-      text: `Looking for a partner for my ${category.toLowerCase()} project (${share}%).`,
-    })),
-  ])
-);
 
 export default function PartnersHeader() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
-  const [selected, setSelected] = useState(categories[0]);
+  const [selected, setSelected] = useState(businessCategories[0]);
+  const [accountType, setAccountType] = useState<"private" | "business">(
+    "private"
+  );
+  const [businessCount, setBusinessCount] = useState<number | null>(null);
+  const [listings, setListings] = useState<PartnerListing[]>([]);
+  const [listingsLoading, setListingsLoading] = useState(false);
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [imageUrl, setImageUrl] = useState("");
+  const [status, setStatus] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  const refreshListings = async (category: string) => {
+    setListingsLoading(true);
+    const { data, error } = await supabase
+      .from("partner_listings")
+      .select(
+        "id, user_id, category, title, description, image_url, created_at"
+      )
+      .eq("category", category)
+      .order("created_at", { ascending: false });
+    if (error) {
+      setListings([]);
+    } else {
+      setListings(data ?? []);
+    }
+    setListingsLoading(false);
+  };
+
+  useEffect(() => {
+    if (pathname !== "/categories") return;
+    let isActive = true;
+    const loadUser = async () => {
+      const { data } = await supabase.auth.getUser();
+      const user = data.user;
+      const meta = data.user?.user_metadata ?? {};
+      let resolvedAccountType =
+        meta.account_type === "business" ? "business" : "private";
+      if (user?.id) {
+        const { data: profileData, error: profileError } = await supabase
+          .from("profiles")
+          .select("account_type")
+          .eq("id", user.id)
+          .maybeSingle();
+        if (!profileError && profileData?.account_type) {
+          resolvedAccountType =
+            profileData.account_type === "business" ? "business" : "private";
+        }
+      }
+      if (isActive) {
+        setAccountType(resolvedAccountType);
+      }
+    };
+    const loadBusinessCount = async () => {
+      const { count, error } = await supabase
+        .from("profiles")
+        .select("id", { count: "exact", head: true })
+        .eq("account_type", "business");
+      if (!isActive) return;
+      setBusinessCount(error ? null : count ?? 0);
+    };
+    loadUser();
+    loadBusinessCount();
+    return () => {
+      isActive = false;
+    };
+  }, [pathname]);
+
+  useEffect(() => {
+    if (pathname !== "/categories") return;
+    refreshListings(selected);
+  }, [pathname, selected]);
 
   if (pathname !== "/categories") return null;
+
+  const freeSlots =
+    typeof businessCount === "number"
+      ? Math.max(0, BUSINESS_FREE_QUOTA - businessCount)
+      : null;
+  const quotaReached =
+    typeof businessCount === "number" && businessCount >= BUSINESS_FREE_QUOTA;
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (submitting) return;
+    setStatus(null);
+    if (accountType !== "business") {
+      setStatus("Only business accounts can publish partner announcements.");
+      return;
+    }
+    if (quotaReached) {
+      setStatus(
+        `Publishing after the first ${BUSINESS_FREE_QUOTA.toLocaleString(
+          "en-US"
+        )} business registrations will cost EUR ${ANNOUNCEMENT_FEE_EUR} per announcement. Payments coming soon.`
+      );
+      return;
+    }
+    const nextDescription = description.trim();
+    const nextTitle = title.trim();
+    const nextImageUrl = imageUrl.trim();
+    if (!nextDescription) {
+      setStatus("Add a description for your announcement.");
+      return;
+    }
+    const { data } = await supabase.auth.getUser();
+    const user = data.user;
+    if (!user) {
+      setStatus("You need to log in first.");
+      return;
+    }
+    setSubmitting(true);
+    const { error } = await supabase.from("partner_listings").insert({
+      user_id: user.id,
+      category: selected,
+      title: nextTitle || null,
+      description: nextDescription,
+      image_url: nextImageUrl || null,
+      is_paid: false,
+    });
+    if (error) {
+      setStatus(error.message || "Could not publish announcement.");
+      setSubmitting(false);
+      return;
+    }
+    setTitle("");
+    setDescription("");
+    setImageUrl("");
+    setStatus("Announcement published.");
+    refreshListings(selected);
+    setSubmitting(false);
+  };
 
   return (
     <div
       className="nyt-divider-categories"
       style={{ display: "flex", justifyContent: "center" }}
     >
-      <div className="nyt-divider-category" style={{ borderBottom: "none", paddingBottom: 0 }}>
-        <div style={{ paddingBottom: 10, borderBottom: "2px solid #222" }}>
+      <div
+        className="nyt-divider-category"
+        style={{ borderBottom: "none", paddingBottom: 0, width: "100%" }}
+      >
+        <div style={{ paddingBottom: 10, borderBottom: "2px solid var(--rule-strong)" }}>
           <div className="nyt-divider-category-name">{selected}</div>
           <button
             type="button"
             onClick={() => setOpen((prev) => !prev)}
             style={{
               marginTop: 6,
-              border: "1px solid #111",
-              background: "transparent",
+              border: "1px solid var(--rule-strong)",
+              background: "var(--paper)",
               padding: "4px 10px",
               borderRadius: 6,
               fontSize: 12,
@@ -107,23 +183,35 @@ export default function PartnersHeader() {
               cursor: "pointer",
               textTransform: "uppercase",
               letterSpacing: "0.05em",
+              color: "var(--ink)",
+              boxShadow: "0 10px 24px rgba(61, 47, 40, 0.16)",
             }}
           >
             Choose another category
           </button>
+          <div style={{ marginTop: 10, fontSize: 12, opacity: 0.75 }}>
+            {accountType === "business"
+              ? businessCount === null
+                ? "Loading business quota..."
+                : quotaReached
+                ? `Free quota reached - EUR ${ANNOUNCEMENT_FEE_EUR} per announcement`
+                : `${freeSlots?.toLocaleString("en-US")} free business registrations left`
+              : "Only business accounts can publish partner announcements."}
+          </div>
           {open && (
             <div
               style={{
                 marginTop: 8,
-                border: "1px solid #111",
-                background: "#0f0f0f",
+                border: "1px solid var(--rule-strong)",
+                background: "var(--paper)",
                 padding: 8,
                 display: "grid",
                 gap: 6,
                 minWidth: 220,
+                boxShadow: "var(--shadow-soft)",
               }}
             >
-              {categories.map((category) => (
+              {businessCategories.map((category) => (
                 <button
                   key={category}
                   type="button"
@@ -141,6 +229,7 @@ export default function PartnersHeader() {
                     textTransform: "uppercase",
                     letterSpacing: "0.05em",
                     cursor: "pointer",
+                    color: "var(--ink)",
                   }}
                 >
                   {category}
@@ -149,21 +238,178 @@ export default function PartnersHeader() {
             </div>
           )}
         </div>
-        <div style={{ marginTop: 12, display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: 16 }}>
-          {(listingsByCategory[selected] ?? []).map((item) => (
+        {accountType === "business" && (
+          <form
+            onSubmit={handleSubmit}
+            style={{
+              marginTop: 16,
+              border: "1px solid var(--rule-light)",
+              borderRadius: 18,
+              padding: 16,
+              background: "rgba(253, 247, 239, 0.78)",
+              boxShadow: "var(--shadow-soft)",
+            }}
+          >
+            <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 8 }}>
+              Publish an announcement
+            </div>
+            <div style={{ fontSize: 12, opacity: 0.7, marginBottom: 12 }}>
+              Posting to: {selected}
+            </div>
+            <label
+              htmlFor="partnerTitle"
+              style={{
+                display: "block",
+                fontSize: 12,
+                letterSpacing: "0.04em",
+                textTransform: "uppercase",
+                marginBottom: 6,
+              }}
+            >
+              Title (optional)
+            </label>
+            <input
+              id="partnerTitle"
+              type="text"
+              value={title}
+              onChange={(event) => setTitle(event.target.value)}
+              placeholder="Looking for a partner"
+              style={{
+                width: "100%",
+                border: "1px solid var(--rule-strong)",
+                borderRadius: 8,
+                padding: "10px 12px",
+                marginBottom: 12,
+                background: "var(--paper)",
+              }}
+            />
+            <label
+              htmlFor="partnerDescription"
+              style={{
+                display: "block",
+                fontSize: 12,
+                letterSpacing: "0.04em",
+                textTransform: "uppercase",
+                marginBottom: 6,
+              }}
+            >
+              Announcement
+            </label>
+            <textarea
+              id="partnerDescription"
+              rows={4}
+              value={description}
+              onChange={(event) => setDescription(event.target.value)}
+              placeholder="Describe what you are looking for."
+              style={{
+                width: "100%",
+                border: "1px solid var(--rule-strong)",
+                borderRadius: 8,
+                padding: "10px 12px",
+                marginBottom: 12,
+                background: "var(--paper)",
+                resize: "vertical",
+              }}
+            />
+            <label
+              htmlFor="partnerImageUrl"
+              style={{
+                display: "block",
+                fontSize: 12,
+                letterSpacing: "0.04em",
+                textTransform: "uppercase",
+                marginBottom: 6,
+              }}
+            >
+              Image URL (optional)
+            </label>
+            <input
+              id="partnerImageUrl"
+              type="url"
+              value={imageUrl}
+              onChange={(event) => setImageUrl(event.target.value)}
+              placeholder="https://"
+              style={{
+                width: "100%",
+                border: "1px solid var(--rule-strong)",
+                borderRadius: 8,
+                padding: "10px 12px",
+                marginBottom: 12,
+                background: "var(--paper)",
+              }}
+            />
+            <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+              <button
+                type="submit"
+                disabled={submitting || quotaReached}
+                style={{
+                  border: "1px solid var(--accent-strong)",
+                  background: "var(--accent-strong)",
+                  color: "#fff7ef",
+                  padding: "8px 14px",
+                  borderRadius: 6,
+                  fontSize: 12,
+                  fontWeight: 600,
+                  cursor: submitting || quotaReached ? "not-allowed" : "pointer",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.05em",
+                  opacity: submitting || quotaReached ? 0.6 : 1,
+                }}
+              >
+                {submitting ? "Publishing..." : "Publish"}
+              </button>
+              {status && (
+                <div style={{ fontSize: 12, opacity: 0.8 }}>{status}</div>
+              )}
+            </div>
+          </form>
+        )}
+
+        <div
+          style={{
+            marginTop: 16,
+            display: "grid",
+            gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+            gap: 16,
+          }}
+        >
+          {listingsLoading && (
+            <div style={{ gridColumn: "1 / -1", fontSize: 13 }}>
+              Loading announcements...
+            </div>
+          )}
+          {!listingsLoading && listings.length === 0 && (
+            <div style={{ gridColumn: "1 / -1", fontSize: 13 }}>
+              No partner announcements yet.
+            </div>
+          )}
+          {listings.map((item) => (
             <div key={item.id} style={{ textAlign: "center" }}>
-              <Image
-                src={item.image}
-                alt={item.category}
-                width={360}
-                height={220}
-                style={{ width: "100%", height: "auto", borderRadius: 24 }}
-              />
-              <div style={{ marginTop: 8, fontSize: 13, color: "#222" }}>
-                {item.text}
+              {item.image_url && (
+                <img
+                  src={item.image_url}
+                  alt={item.title || item.category}
+                  loading="lazy"
+                  style={{ width: "100%", height: "auto", borderRadius: 24 }}
+                />
+              )}
+              {item.title && (
+                <div style={{ marginTop: 8, fontSize: 13, fontWeight: 600 }}>
+                  {item.title}
+                </div>
+              )}
+              <div style={{ marginTop: 6, fontSize: 13 }}>
+                {item.description}
               </div>
             </div>
           ))}
+          {!listingsLoading &&
+            listings.length === 0 &&
+            businessCategoryImages[selected] && (
+              <div style={{ gridColumn: "1 / -1", fontSize: 12, opacity: 0.6 }}>
+                Be the first to post in {selected}.
+              </div>
+            )}
         </div>
       </div>
     </div>

@@ -6,7 +6,6 @@ import { useSearchParams } from "next/navigation";
 import { useCategory } from "../components/CategoryContext";
 import { ideasByCategory, type Idea } from "../data/categories";
 import { supabase } from "../../lib/supabaseClient";
-import IdeaCarousel from "../components/IdeaCarousel";
 
 export const dynamic = "force-dynamic";
 
@@ -17,6 +16,7 @@ type IdeaCard = Idea & {
   userId?: string | null;
   createdAt?: string | null;
   userPhotoUrl?: string | null;
+  updates?: IdeaUpdate[];
 };
 
 type IdeaRow = {
@@ -25,6 +25,23 @@ type IdeaRow = {
   description: string;
   category: string | null;
   user_id: string;
+  photo_url: string | null;
+  video_url: string | null;
+  created_at: string | null;
+};
+
+type IdeaUpdate = {
+  id: string;
+  description: string;
+  photoUrl?: string | null;
+  videoUrl?: string | null;
+  createdAt?: string | null;
+};
+
+type IdeaUpdateRow = {
+  id: string;
+  idea_id: string;
+  body: string;
   photo_url: string | null;
   video_url: string | null;
   created_at: string | null;
@@ -123,6 +140,27 @@ export default function TheIdeaPage() {
           return acc;
         }, {} as Record<string, { full_name: string | null; photo_url: string | null }>);
       }
+      const ideaIds = rows.map((row) => row.id);
+      let updateMap: Record<string, IdeaUpdate[]> = {};
+      if (ideaIds.length > 0) {
+        const { data: updates } = await supabase
+          .from("idea_updates")
+          .select("id, idea_id, body, photo_url, video_url, created_at")
+          .in("idea_id", ideaIds)
+          .order("created_at", { ascending: true });
+        updateMap = (updates ?? []).reduce((acc, update) => {
+          const list = acc[update.idea_id] ?? [];
+          list.push({
+            id: update.id,
+            description: update.body,
+            photoUrl: update.photo_url,
+            videoUrl: update.video_url,
+            createdAt: update.created_at,
+          });
+          acc[update.idea_id] = list;
+          return acc;
+        }, {} as Record<string, IdeaUpdate[]>);
+      }
       const mapped = rows.map((row) => ({
         id: row.id,
         title: row.title || "Untitled idea",
@@ -136,6 +174,7 @@ export default function TheIdeaPage() {
         userId: row.user_id,
         createdAt: row.created_at,
         userPhotoUrl: profileMap[row.user_id]?.photo_url || null,
+        updates: updateMap[row.id] ?? [],
       }));
       setStoredIdeas(mapped);
     };
@@ -222,10 +261,55 @@ export default function TheIdeaPage() {
     });
   }, [query, sortedIdeas]);
 
+  const handleSignal = async (ideaId: string) => {
+    if (!userId || !activeCategory) return;
+    setSignalLoadingId(ideaId);
+    if (signaledIdeaId === ideaId) {
+      await supabase
+        .from("idea_signals")
+        .delete()
+        .eq("user_id", userId)
+        .eq("category", activeCategory);
+      setSignalCounts((prev) => ({
+        ...prev,
+        [ideaId]: Math.max(0, (prev[ideaId] ?? 0) - 1),
+      }));
+      setSignaledIdeaId(null);
+      setSignalLoadingId(null);
+      return;
+    }
+
+    if (signaledIdeaId) {
+      await supabase
+        .from("idea_signals")
+        .delete()
+        .eq("user_id", userId)
+        .eq("category", activeCategory);
+    }
+    await supabase.from("idea_signals").insert({
+      user_id: userId,
+      idea_id: ideaId,
+      category: activeCategory,
+    });
+    setSignalCounts((prev) => {
+      const next = { ...prev };
+      if (signaledIdeaId) {
+        next[signaledIdeaId] = Math.max(
+          0,
+          (prev[signaledIdeaId] ?? 0) - 1
+        );
+      }
+      next[ideaId] = (prev[ideaId] ?? 0) + 1;
+      return next;
+    });
+    setSignaledIdeaId(ideaId);
+    setSignalLoadingId(null);
+  };
+
   return (
     <div className="nyt-main" style={{ maxWidth: 900, margin: '0 auto', padding: '16px 16px 32px' }}>
       {!activeCategory && (
-        <div style={{ textAlign: 'center', color: '#666', marginTop: 24 }}>
+        <div style={{ textAlign: 'center', color: 'rgba(61, 47, 40, 0.7)', marginTop: 24 }}>
           Select a category above to see ideas.
         </div>
       )}
@@ -241,20 +325,22 @@ export default function TheIdeaPage() {
                 flex: 1,
                 minWidth: 0,
                 maxWidth: '100%',
-                border: '1px solid #111',
+                border: '1px solid var(--rule-strong)',
                 borderRadius: 6,
                 padding: '8px 12px',
                 fontSize: 14,
                 fontFamily: 'Georgia, Times New Roman, Times, serif',
+                background: 'var(--paper)',
+                color: 'var(--ink)',
               }}
             />
             <button
               type="button"
               onClick={() => setSortBy("votes")}
               style={{
-                border: '1px solid #111',
-                background: sortBy === "votes" ? '#111' : 'transparent',
-                color: sortBy === "votes" ? '#fff' : '#111',
+                border: '1px solid var(--rule-strong)',
+                background: sortBy === "votes" ? 'var(--accent-soft)' : 'transparent',
+                color: 'var(--ink)',
                 padding: '8px 12px',
                 borderRadius: 6,
                 fontSize: 12,
@@ -269,9 +355,9 @@ export default function TheIdeaPage() {
               type="button"
               onClick={() => setSortBy("signals")}
               style={{
-                border: '1px solid #111',
-                background: sortBy === "signals" ? '#111' : 'transparent',
-                color: sortBy === "signals" ? '#fff' : '#111',
+                border: '1px solid var(--rule-strong)',
+                background: sortBy === "signals" ? 'var(--accent-soft)' : 'transparent',
+                color: 'var(--ink)',
                 padding: '8px 12px',
                 borderRadius: 6,
                 fontSize: 12,
@@ -289,10 +375,10 @@ export default function TheIdeaPage() {
                 Users
               </div>
               {userLoading && (
-                <div style={{ fontSize: 12, color: '#666' }}>Searching users...</div>
+                <div style={{ fontSize: 12, color: 'rgba(61, 47, 40, 0.7)' }}>Searching users...</div>
               )}
               {!userLoading && userResults.length === 0 && (
-                <div style={{ fontSize: 12, color: '#666' }}>No users found.</div>
+                <div style={{ fontSize: 12, color: 'rgba(61, 47, 40, 0.7)' }}>No users found.</div>
               )}
               <div style={{ display: 'grid', gap: 8, marginTop: 8 }}>
                 {userResults.map((user) => (
@@ -304,18 +390,48 @@ export default function TheIdeaPage() {
                       alignItems: 'center',
                       gap: 10,
                       textDecoration: 'none',
-                      color: '#111',
-                      borderBottom: '1px solid #ddd',
+                      color: 'var(--ink)',
+                      borderBottom: '1px solid var(--rule-light)',
                       paddingBottom: 8,
                     }}
                   >
-                    <img
-                      src={user.photo_url || "https://randomuser.me/api/portraits/lego/1.jpg"}
-                      alt={user.full_name || "User"}
-                      width={32}
-                      height={32}
-                      style={{ width: 32, height: 32, objectFit: 'cover', borderRadius: 24, background: '#111' }}
-                    />
+                    {user.photo_url ? (
+                      <img
+                        src={user.photo_url}
+                        alt={user.full_name || "User"}
+                        width={32}
+                        height={32}
+                        style={{
+                          width: 32,
+                          height: 32,
+                          objectFit: "cover",
+                          borderRadius: 24,
+                          background: "var(--surface)",
+                        }}
+                      />
+                    ) : (
+                      <div
+                        style={{
+                          width: 32,
+                          height: 32,
+                          borderRadius: 24,
+                          border: "1px dashed var(--rule-strong)",
+                          background: "var(--paper)",
+                          display: "grid",
+                          placeItems: "center",
+                          fontSize: 8,
+                          fontWeight: 600,
+                          letterSpacing: "0.06em",
+                          textTransform: "uppercase",
+                          color: "rgba(58, 43, 36, 0.6)",
+                          lineHeight: 1.1,
+                          whiteSpace: "pre-line",
+                          textAlign: "center",
+                        }}
+                      >
+                        {"No\nPhoto"}
+                      </div>
+                    )}
                     <span style={{ fontSize: 14, fontWeight: 600 }}>
                       {user.full_name || "User"}
                     </span>
@@ -329,103 +445,38 @@ export default function TheIdeaPage() {
               <div
                 key={idea.id}
                 style={{
-                  borderBottom: '1px solid #ddd',
+                  borderBottom: '1px solid var(--rule-light)',
                   paddingBottom: 16,
                   fontFamily: 'Georgia, Times New Roman, Times, serif',
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 6, flexWrap: 'nowrap', whiteSpace: 'nowrap' }}>
-                  <div style={{ fontSize: 16, fontWeight: 700, color: '#111' }}>
+                  <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--ink)' }}>
                     {idea.title}
                   </div>
-                  <span style={{ color: '#111' }}>•</span>
-                  <div style={{ fontSize: 16, fontWeight: 700, color: '#111' }}>
+                  <span style={{ color: 'var(--ink)' }}>•</span>
+                  <Link
+                    href={`/profile/${idea.userId}`}
+                    style={{ fontSize: 16, fontWeight: 700, color: 'var(--ink)', textDecoration: 'none' }}
+                  >
                     {idea.user}
-                  </div>
-                  <span style={{ color: '#111' }}>•</span>
-                  <div style={{ fontSize: 16, fontWeight: 700, color: '#111' }}>
-                    {signalCounts[idea.id] ?? 0} signals
-                  </div>
-                  <span style={{ color: '#111' }}>•</span>
-                  <div style={{ fontSize: 16, fontWeight: 700, color: '#111' }}>
-                    {idea.votes} votes
-                  </div>
-                </div>
-                <IdeaCarousel
-                  description={idea.description}
-                  photoUrl={idea.photoUrl}
-                  videoUrl={idea.videoUrl}
-                  title={idea.title}
-                  ideaId={idea.id}
-                  userName={idea.user}
-                  userPhotoUrl={idea.userPhotoUrl}
-                  timeLabel={formatTimeAgo(idea.createdAt)}
-                />
-                <div style={{ marginTop: 10 }}>
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      if (!userId || !activeCategory) return;
-                      setSignalLoadingId(idea.id);
-                      if (signaledIdeaId === idea.id) {
-                        await supabase
-                          .from("idea_signals")
-                          .delete()
-                          .eq("user_id", userId)
-                          .eq("category", activeCategory);
-                        setSignalCounts((prev) => ({
-                          ...prev,
-                          [idea.id]: Math.max(0, (prev[idea.id] ?? 0) - 1),
-                        }));
-                        setSignaledIdeaId(null);
-                        setSignalLoadingId(null);
-                        return;
-                      }
-
-                      if (signaledIdeaId) {
-                        await supabase
-                          .from("idea_signals")
-                          .delete()
-                          .eq("user_id", userId)
-                          .eq("category", activeCategory);
-                      }
-                      await supabase.from("idea_signals").insert({
-                        user_id: userId,
-                        idea_id: idea.id,
-                        category: activeCategory,
-                      });
-                      setSignalCounts((prev) => {
-                        const next = { ...prev };
-                        if (signaledIdeaId) {
-                          next[signaledIdeaId] = Math.max(
-                            0,
-                            (prev[signaledIdeaId] ?? 0) - 1
-                          );
-                        }
-                        next[idea.id] = (prev[idea.id] ?? 0) + 1;
-                        return next;
-                      });
-                      setSignaledIdeaId(idea.id);
-                      setSignalLoadingId(null);
-                    }}
-                    disabled={signalLoadingId === idea.id}
+                  </Link>
+                  <span
                     style={{
-                      border: '1px solid #111',
-                      background: signaledIdeaId === idea.id ? '#111' : 'transparent',
-                      color: signaledIdeaId === idea.id ? '#fff' : '#111',
-                      padding: '6px 10px',
-                      borderRadius: 6,
-                      fontSize: 12,
-                      fontWeight: 600,
-                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      fontSize: 16,
+                      fontWeight: 700,
                     }}
                   >
-                    {signalLoadingId === idea.id
-                      ? 'Saving...'
-                      : signaledIdeaId === idea.id
-                        ? 'Signal Sent'
-                        : 'Give Signal'}
-                  </button>
+                    <span>{signalCounts[idea.id] ?? 0}</span>
+                    <span>Signals</span>
+                  </span>
+                  <span style={{ color: 'var(--ink)' }}>•</span>
+                  <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--ink)' }}>
+                    {idea.votes} votes
+                  </div>
                 </div>
               </div>
             ))}

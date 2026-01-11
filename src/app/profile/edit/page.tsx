@@ -11,6 +11,9 @@ export default function EditProfilePage() {
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [bio, setBio] = useState("");
+  const [accountType, setAccountType] = useState<"private" | "business">(
+    "private"
+  );
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
@@ -24,11 +27,8 @@ export default function EditProfilePage() {
         meta.full_name || meta.name || data.user?.email || ""
       );
       setBio(meta.bio || "");
-      setPhotoUrl(
-        meta.photo_url ||
-          meta.avatar_url ||
-          "https://randomuser.me/api/portraits/women/21.jpg"
-      );
+      setAccountType(meta.account_type === "business" ? "business" : "private");
+      setPhotoUrl(meta.photo_url || meta.avatar_url || "");
     };
     loadUser();
   }, []);
@@ -48,9 +48,8 @@ export default function EditProfilePage() {
   const handleSave = async () => {
     setSaving(true);
     setStatus(null);
-    let nextPhoto =
-      photoUrl.trim() ||
-      "https://randomuser.me/api/portraits/women/21.jpg";
+    const trimmedPhoto = photoUrl.trim();
+    let nextPhoto: string | null = trimmedPhoto || null;
 
     if (photoFile) {
       const extension =
@@ -90,6 +89,7 @@ export default function EditProfilePage() {
         full_name: fullName,
         bio,
         photo_url: nextPhoto,
+        account_type: accountType,
         updated_at: new Date().toISOString(),
       });
     }
@@ -107,23 +107,41 @@ export default function EditProfilePage() {
       style={{ maxWidth: 900, margin: "32px auto", padding: "0 16px" }}
     >
       <div style={{ display: "flex", gap: 24, alignItems: "flex-start" }}>
-        <img
-          src={
-            photoPreview ||
-            photoUrl ||
-            "https://randomuser.me/api/portraits/women/21.jpg"
-          }
-          alt="Profile"
-          width={140}
-          height={180}
-          style={{
-            width: 140,
-            height: 180,
-            borderRadius: 24,
-            objectFit: "cover",
-            background: "#111",
-          }}
-        />
+        {photoPreview || photoUrl ? (
+          <img
+            src={photoPreview || photoUrl}
+            alt="Profile"
+            width={140}
+            height={180}
+            style={{
+              width: 140,
+              height: 180,
+              borderRadius: 24,
+              objectFit: "cover",
+              background: "var(--surface)",
+            }}
+          />
+        ) : (
+          <div
+            style={{
+              width: 140,
+              height: 180,
+              borderRadius: 24,
+              border: "1px dashed var(--rule-strong)",
+              background: "var(--paper)",
+              display: "grid",
+              placeItems: "center",
+              fontSize: 12,
+              letterSpacing: "0.14em",
+              textTransform: "uppercase",
+              textAlign: "center",
+              color: "rgba(58, 43, 36, 0.6)",
+              padding: 12,
+            }}
+          >
+            Add profile picture
+          </div>
+        )}
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 20, fontWeight: 700, marginBottom: 16 }}>
             Edit Profile
@@ -134,7 +152,7 @@ export default function EditProfilePage() {
               style={{
                 display: "block",
                 fontSize: 12,
-                color: "#666",
+                color: "rgba(61, 47, 40, 0.7)",
                 textTransform: "uppercase",
                 letterSpacing: "0.04em",
                 marginBottom: 6,
@@ -154,8 +172,8 @@ export default function EditProfilePage() {
                 padding: "8px 10px",
                 fontFamily: "Georgia, Times New Roman, Times, serif",
                 fontSize: 14,
-                color: "#222",
-                background: "#0f0f0f",
+                color: "var(--ink)",
+                background: "var(--paper)",
               }}
             />
           </div>
@@ -165,7 +183,7 @@ export default function EditProfilePage() {
               style={{
                 display: "block",
                 fontSize: 12,
-                color: "#666",
+                color: "rgba(61, 47, 40, 0.7)",
                 textTransform: "uppercase",
                 letterSpacing: "0.04em",
                 marginBottom: 6,
@@ -186,8 +204,8 @@ export default function EditProfilePage() {
                 padding: "8px 10px",
                 fontFamily: "Georgia, Times New Roman, Times, serif",
                 fontSize: 14,
-                color: "#222",
-                background: "#0f0f0f",
+                color: "var(--ink)",
+                background: "var(--paper)",
               }}
             />
           </div>
@@ -197,7 +215,7 @@ export default function EditProfilePage() {
               style={{
                 display: "block",
                 fontSize: 12,
-                color: "#666",
+                color: "rgba(61, 47, 40, 0.7)",
                 textTransform: "uppercase",
                 letterSpacing: "0.04em",
                 marginBottom: 6,
@@ -222,7 +240,7 @@ export default function EditProfilePage() {
               style={{
                 display: "block",
                 fontSize: 12,
-                color: "#666",
+                color: "rgba(61, 47, 40, 0.7)",
                 textTransform: "uppercase",
                 letterSpacing: "0.04em",
                 marginBottom: 6,
@@ -235,6 +253,7 @@ export default function EditProfilePage() {
               rows={4}
               value={bio}
               onChange={(event) => setBio(event.target.value)}
+              placeholder="Write a short bio about yourself."
               style={{
                 width: "100%",
                 border: "1px solid #bbb",
@@ -242,8 +261,8 @@ export default function EditProfilePage() {
                 padding: "8px 10px",
                 fontFamily: "Georgia, Times New Roman, Times, serif",
                 fontSize: 14,
-                color: "#222",
-                background: "#0f0f0f",
+                color: "var(--ink)",
+                background: "var(--paper)",
                 resize: "vertical",
               }}
             />
@@ -254,9 +273,9 @@ export default function EditProfilePage() {
               onClick={handleSave}
               disabled={saving}
               style={{
-                border: "1px solid #111",
-                background: "#111",
-                color: "#fff",
+                border: "1px solid var(--accent-strong)",
+                background: "var(--accent-strong)",
+                color: "#fff7ef",
                 padding: "8px 14px",
                 borderRadius: 6,
                 fontSize: 13,
@@ -270,20 +289,23 @@ export default function EditProfilePage() {
               type="button"
               onClick={() => router.replace("/profile")}
               style={{
-                border: "1px solid #111",
-                background: "transparent",
+                border: "1px solid var(--rule-strong)",
+                background: "var(--paper)",
                 padding: "8px 14px",
                 borderRadius: 6,
                 fontSize: 13,
                 fontWeight: 600,
                 cursor: "pointer",
+                color: "var(--ink)",
               }}
             >
               Cancel
             </button>
           </div>
           {status && (
-            <div style={{ marginTop: 10, fontSize: 12, color: "#444" }}>
+            <div
+              style={{ marginTop: 10, fontSize: 12, color: "rgba(61, 47, 40, 0.7)" }}
+            >
               {status}
             </div>
           )}
