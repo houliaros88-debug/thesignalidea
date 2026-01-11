@@ -16,6 +16,25 @@ type SignalItem = {
   otherUserPhotoUrl: string | null;
 };
 
+type IdeaRef = {
+  id: string;
+  title: string | null;
+  user_id: string | null;
+};
+
+type SignalRow = {
+  id: string;
+  category: string | null;
+  created_at: string | null;
+  user_id?: string | null;
+  idea?: IdeaRef | IdeaRef[] | null;
+};
+
+const normalizeIdea = (idea: IdeaRef | IdeaRef[] | null | undefined) => {
+  if (!idea) return null;
+  return Array.isArray(idea) ? idea[0] ?? null : idea;
+};
+
 const formatTimeAgo = (value: string | null) => {
   if (!value) return "";
   const created = new Date(value).getTime();
@@ -70,15 +89,7 @@ export default function SignalsPage() {
       }
 
       const ownedIdeaIds = (ownedIdeas ?? []).map((idea) => idea.id);
-      let receivedRows:
-        | Array<{
-            id: string;
-            category: string | null;
-            created_at: string | null;
-            user_id: string | null;
-            idea: { id: string; title: string | null; user_id: string | null } | null;
-          }>
-        | null = [];
+      let receivedRows: SignalRow[] = [];
       if (ownedIdeaIds.length > 0) {
         const { data, error } = await supabase
           .from("idea_signals")
@@ -91,12 +102,12 @@ export default function SignalsPage() {
           setLoading(false);
           return;
         }
-        receivedRows = data ?? [];
+        receivedRows = (data ?? []) as SignalRow[];
       }
 
       const profileIds = new Set<string>();
-      (givenRows ?? []).forEach((row) => {
-        const ideaOwnerId = (row as any)?.idea?.user_id as string | null;
+      ((givenRows ?? []) as SignalRow[]).forEach((row) => {
+        const ideaOwnerId = normalizeIdea(row.idea)?.user_id ?? null;
         if (ideaOwnerId) {
           profileIds.add(ideaOwnerId);
         }
@@ -123,10 +134,8 @@ export default function SignalsPage() {
         }, {} as Record<string, { id: string; full_name: string | null; photo_url: string | null }>);
       }
 
-      const given = (givenRows ?? []).map((row) => {
-        const idea = (row as any)?.idea as
-          | { id: string; title: string | null; user_id: string | null }
-          | null;
+      const given = ((givenRows ?? []) as SignalRow[]).map((row) => {
+        const idea = normalizeIdea(row.idea);
         const ownerId = idea?.user_id ?? null;
         const owner = ownerId ? profileMap[ownerId] : null;
         return {
@@ -142,9 +151,7 @@ export default function SignalsPage() {
       });
 
       const received = (receivedRows ?? []).map((row) => {
-        const idea = row.idea as
-          | { id: string; title: string | null; user_id: string | null }
-          | null;
+        const idea = normalizeIdea(row.idea);
         const actorId = row.user_id ?? null;
         const actor = actorId ? profileMap[actorId] : null;
         return {
