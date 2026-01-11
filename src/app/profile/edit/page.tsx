@@ -48,7 +48,7 @@ export default function EditProfilePage() {
   const handleSave = async () => {
     setSaving(true);
     setStatus(null);
-    const trimmedPhoto = photoUrl.trim();
+    const trimmedPhoto = (photoUrl ?? "").trim();
     let nextPhoto: string | null = trimmedPhoto || null;
 
     if (photoFile) {
