@@ -50,7 +50,7 @@ export default function CreatePage() {
       setUserName(
         meta.full_name || meta.name || data.user?.email || "User"
       );
-      let resolvedAccountType =
+      let resolvedAccountType: "private" | "business" =
         meta.account_type === "business" ? "business" : "private";
       if (user?.id) {
         const { data: profileData, error: profileError } = await supabase
