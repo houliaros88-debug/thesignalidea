@@ -4,7 +4,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "../../lib/supabaseClient";
 
-export const carouselHeight = "min(130vh, 1200px)";
+export const carouselHeight = "clamp(520px, 90vh, 960px)";
 export const carouselWidth = "min(92vw, 560px)";
 
 export default function IdeaCarousel({

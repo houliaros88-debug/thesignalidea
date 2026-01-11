@@ -238,6 +238,66 @@
   }
 }
 
+@media (max-width: 640px) {
+  .heroMain,
+  .heroPanel {
+    padding: 20px;
+  }
+
+  .sectionTitle {
+    font-size: 22px;
+  }
+
+  .sectionSub {
+    font-size: 12px;
+  }
+
+  .storyRow {
+    width: 100%;
+    margin: 8px auto 12px;
+    padding: 4px 0 8px;
+  }
+
+  .storyTile {
+    width: 88px;
+    height: 88px;
+    border-radius: 14px;
+  }
+
+  .storyName {
+    max-width: 90px;
+    font-size: 9px;
+  }
+
+  .feedTabs {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .feedTab {
+    flex: 1 1 0;
+    padding: 8px 10px;
+  }
+
+  .videoStack {
+    margin-bottom: 24px;
+  }
+
+  .followFeed {
+    width: 100%;
+  }
+
+  .heroVideo {
+    height: min(100vh, 880px);
+  }
+
+  .avatar,
+  .avatarFallback {
+    width: 42px;
+    height: 42px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .reveal {
     animation: none;

@@ -676,6 +676,7 @@ export default function ReviewsHeader() {
 
         <div style={{ marginTop: 18, display: "grid", gap: 12 }}>
           <div
+            className="reviews-search-row"
             style={{
               display: "flex",
               gap: 12,

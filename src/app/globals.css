@@ -461,6 +461,10 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 @media (max-width: 900px) {
+  .nyt-header-nav {
+    padding: 6px 12px;
+  }
+
   .nyt-header {
     padding: 28px 0 12px 0;
   }
@@ -474,6 +478,15 @@ h1, h2, h3, h4, h5, h6 {
     flex-wrap: wrap;
     gap: 16px !important;
     row-gap: 8px;
+  }
+
+  .nyt-header-back,
+  .nyt-header-actions {
+    width: 100%;
+  }
+
+  .nyt-header-actions {
+    justify-content: center;
   }
 
   .nyt-divider-categories {
@@ -513,6 +526,10 @@ h1, h2, h3, h4, h5, h6 {
     flex-wrap: wrap;
     justify-content: center;
     row-gap: 8px;
+  }
+
+  .reviews-search-row {
+    align-items: stretch;
   }
 
   .profile-header {
@@ -564,6 +581,17 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 @media (max-width: 640px) {
+  main,
+  .nyt-main {
+    padding: 20px 0 !important;
+  }
+
+  .nyt-main {
+    margin: 20px auto !important;
+    padding: 0 12px !important;
+    gap: 16px !important;
+  }
+
   .nyt-header {
     padding: 22px 0 8px 0;
   }
@@ -580,6 +608,7 @@ h1, h2, h3, h4, h5, h6 {
   .nyt-header-nav {
     flex-direction: column;
     gap: 10px;
+    align-items: stretch;
   }
 
   .nyt-header-back,
@@ -589,6 +618,35 @@ h1, h2, h3, h4, h5, h6 {
 
   .nyt-header-actions {
     flex-direction: row !important;
+    justify-content: center;
+  }
+
+  .nyt-header-links {
+    gap: 10px !important;
+  }
+
+  .nyt-header nav a {
+    font-size: 10px;
+    letter-spacing: 0.06em;
+  }
+
+  .nyt-header-actions a {
+    width: 28px !important;
+    height: 28px !important;
+    border-width: 2px !important;
+  }
+
+  .nyt-divider-category {
+    padding: 6px 10px;
+  }
+
+  .nyt-divider-category-name {
+    font-size: 1em;
+    letter-spacing: 0.06em;
+  }
+
+  .nyt-divider-category-meta {
+    font-size: 0.95em;
   }
 
   .nyt-divider-categories {
@@ -610,14 +668,34 @@ h1, h2, h3, h4, h5, h6 {
   .profile-stats {
     flex-wrap: wrap;
     gap: 12px;
+    justify-content: flex-start;
   }
 
   .profile-tab-grid {
     grid-template-columns: 1fr !important;
   }
 
+  .idea-search-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
   .idea-search-row button {
     flex: 1 1 140px;
+  }
+
+  .reviews-tabs {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .reviews-tabs button {
+    width: 100%;
+  }
+
+  .reviews-search-row {
+    flex-direction: column;
+    align-items: stretch;
   }
 
   .settings-row {
@@ -627,12 +705,17 @@ h1, h2, h3, h4, h5, h6 {
   }
 
   .notification-row {
-    flex-wrap: wrap;
+    flex-direction: column;
     align-items: flex-start;
   }
 
   .notification-row > div:last-child {
     width: 100%;
+  }
+
+  .signal-row {
+    flex-direction: column;
+    align-items: flex-start;
   }
 
   .settings-language-select {

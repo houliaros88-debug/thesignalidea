@@ -249,6 +249,7 @@ export default function SignalsPage() {
                 {givenSignals.map((signal) => (
                   <div
                     key={signal.id}
+                    className="signal-row"
                     style={{
                       display: "flex",
                       alignItems: "center",
@@ -347,6 +348,7 @@ export default function SignalsPage() {
                   {receivedSignals.map((signal) => (
                     <div
                       key={signal.id}
+                      className="signal-row"
                       style={{
                         display: "flex",
                         alignItems: "center",
