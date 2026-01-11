@@ -460,6 +460,187 @@ h1, h2, h3, h4, h5, h6 {
   }
 }
 
+@media (max-width: 900px) {
+  .nyt-header {
+    padding: 28px 0 12px 0;
+  }
+
+  .nyt-title {
+    font-size: 2.2em;
+    letter-spacing: 0.12em;
+  }
+
+  .nyt-header-links {
+    flex-wrap: wrap;
+    gap: 16px !important;
+    row-gap: 8px;
+  }
+
+  .nyt-divider-categories {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .jobs-form {
+    grid-template-columns: 1fr !important;
+  }
+
+  .jobs-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .partners-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .reviews-profiles-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .reviews-list-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .reviews-form-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .messages-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .reviews-tabs {
+    flex-wrap: wrap;
+    justify-content: center;
+    row-gap: 8px;
+  }
+
+  .profile-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .profile-header-main {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .profile-actions {
+    align-items: flex-start;
+  }
+
+  .profile-tab-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .idea-detail-grid {
+    grid-template-columns: 1fr !important;
+    min-width: 0 !important;
+  }
+
+  .idea-detail-scroll {
+    overflow-x: visible !important;
+  }
+
+  .idea-search-row {
+    flex-wrap: wrap;
+    align-items: stretch;
+  }
+
+  .idea-list-row {
+    flex-wrap: wrap !important;
+    white-space: normal !important;
+    row-gap: 4px;
+  }
+
+  .profile-edit-layout {
+    flex-direction: column;
+    align-items: stretch !important;
+  }
+
+  .profile-edit-layout > div:last-child {
+    width: 100%;
+  }
+}
+
+@media (max-width: 640px) {
+  .nyt-header {
+    padding: 22px 0 8px 0;
+  }
+
+  .nyt-title {
+    font-size: 1.7em;
+    letter-spacing: 0.1em;
+  }
+
+  .nyt-date {
+    font-size: 0.95em;
+  }
+
+  .nyt-header-nav {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .nyt-header-back,
+  .nyt-header-actions {
+    position: static !important;
+  }
+
+  .nyt-header-actions {
+    flex-direction: row !important;
+  }
+
+  .nyt-divider-categories {
+    grid-template-columns: 1fr;
+  }
+
+  .jobs-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .partners-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .reviews-profiles-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .profile-stats {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .profile-tab-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .idea-search-row button {
+    flex: 1 1 140px;
+  }
+
+  .settings-row {
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-start !important;
+  }
+
+  .notification-row {
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+
+  .notification-row > div:last-child {
+    width: 100%;
+  }
+
+  .settings-language-select {
+    width: 100%;
+    min-width: 0;
+  }
+}
+
 * {
   box-sizing: border-box;
   padding: 0;

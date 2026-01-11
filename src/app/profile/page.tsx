@@ -1322,8 +1322,11 @@ export default function ProfilePage() {
           </div>
         </div>
       )}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 24, marginBottom: 24 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
+      <div
+        className="profile-header"
+        style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 24, marginBottom: 24 }}
+      >
+        <div className="profile-header-main" style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
           {photoUrl ? (
             <img
               src={photoUrl}
@@ -1467,7 +1470,7 @@ export default function ProfilePage() {
                 </button>
               )}
             </div>
-            <div style={{ display: 'flex', gap: 16, textAlign: 'center' }}>
+            <div className="profile-stats" style={{ display: 'flex', gap: 16, textAlign: 'center' }}>
               <Link
                 href={followersHref}
                 style={{ textDecoration: 'none', color: 'inherit' }}
@@ -1513,7 +1516,7 @@ export default function ProfilePage() {
             </div>
           </div>
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8 }}>
+        <div className="profile-actions" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8 }}>
           {isSelf && (
             <div style={{ position: "relative" }}>
               <button
@@ -2101,12 +2104,15 @@ export default function ProfilePage() {
         </div>
       )}
       {activeTab === 'Pictures' && (
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(3, 1fr)',
-          gap: 4,
-          marginTop: 16
-        }}>
+        <div
+          className="profile-tab-grid"
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(3, 1fr)",
+            gap: 4,
+            marginTop: 16,
+          }}
+        >
           {pictures.slice(0, 9).map((src, i) => (
             <Image
               key={i}
@@ -2121,12 +2127,15 @@ export default function ProfilePage() {
         </div>
       )}
       {activeTab === 'Videos' && (
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(3, 1fr)',
-          gap: 4,
-          marginTop: 16
-        }}>
+        <div
+          className="profile-tab-grid"
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(3, 1fr)",
+            gap: 4,
+            marginTop: 16,
+          }}
+        >
           {videos.slice(0, 9).map((src, i) => (
             <video
               key={i}
@@ -2138,12 +2147,15 @@ export default function ProfilePage() {
         </div>
       )}
       {activeTab === 'Jobs' && (
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(3, 1fr)',
-          gap: 16,
-          marginTop: 16
-        }}>
+        <div
+          className="profile-tab-grid"
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(3, 1fr)",
+            gap: 16,
+            marginTop: 16,
+          }}
+        >
           {jobs.map((job, i) => (
             <div key={i} style={{
               background: 'none',

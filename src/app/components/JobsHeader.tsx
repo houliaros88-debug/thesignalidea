@@ -174,6 +174,7 @@ export default function JobsHeader() {
         {accountType === "business" && (
           <form
             onSubmit={handleSubmit}
+            className="jobs-form"
             style={{
               marginTop: 18,
               display: "grid",
@@ -297,6 +298,7 @@ export default function JobsHeader() {
         </div>
 
         <div
+          className="jobs-grid"
           style={{
             marginTop: 16,
             display: "grid",

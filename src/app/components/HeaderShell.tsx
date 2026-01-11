@@ -135,6 +135,7 @@ export default function HeaderShell() {
       {!hideMenu && (
         <>
           <div
+            className="nyt-header-nav"
             style={{
               position: "relative",
               display: "flex",
@@ -144,6 +145,7 @@ export default function HeaderShell() {
             }}
           >
             <div
+              className="nyt-header-back"
               style={{
                 position: "absolute",
                 left: 12,
@@ -171,6 +173,7 @@ export default function HeaderShell() {
               </button>
             </div>
             <nav
+              className="nyt-header-links"
               style={{
                 display: "flex",
                 gap: 24,
@@ -219,6 +222,7 @@ export default function HeaderShell() {
               ))}
             </nav>
             <div
+              className="nyt-header-actions"
               style={{
                 position: "absolute",
                 right: 12,

@@ -195,6 +195,7 @@ export default function MessagesPage() {
         </div>
       ) : (
         <div
+          className="messages-grid"
           style={{
             display: "grid",
             gridTemplateColumns: "repeat(auto-fit, minmax(320px, 380px))",

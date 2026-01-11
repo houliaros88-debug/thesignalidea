@@ -186,12 +186,14 @@ export default function IdeaDetailPage() {
               {entry.createdAt ? ` • ${formatTimeAgo(entry.createdAt)}` : ""}
             </div>
             <div
+              className="idea-detail-scroll"
               style={{
                 width: "100%",
                 overflowX: "auto",
               }}
             >
               <div
+                className="idea-detail-grid"
                 style={{
                   display: "grid",
                   gridTemplateColumns: "repeat(3, minmax(240px, 1fr))",

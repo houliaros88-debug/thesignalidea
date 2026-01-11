@@ -366,6 +366,7 @@ export default function PartnersHeader() {
         )}
 
         <div
+          className="partners-grid"
           style={{
             marginTop: 16,
             display: "grid",

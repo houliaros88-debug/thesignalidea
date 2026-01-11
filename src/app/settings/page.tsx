@@ -193,6 +193,7 @@ export default function SettingsPage() {
               }}
             >
               <div
+                className="settings-row"
                 style={{
                   display: "flex",
                   justifyContent: "space-between",
@@ -216,6 +217,7 @@ export default function SettingsPage() {
                   value={languageCode}
                   onChange={handleLanguageChange}
                   disabled={languageSaving}
+                  className="settings-language-select"
                   style={{
                     border: "1px solid var(--rule-strong)",
                     background: "var(--paper)",
@@ -267,6 +269,7 @@ export default function SettingsPage() {
               {accountType === "business" ? (
                 <>
                   <div
+                    className="settings-row"
                     style={{
                       display: "flex",
                       justifyContent: "space-between",
@@ -314,6 +317,7 @@ export default function SettingsPage() {
               ) : (
                 <>
                   <div
+                    className="settings-row"
                     style={{
                       display: "flex",
                       justifyContent: "space-between",
@@ -358,6 +362,7 @@ export default function SettingsPage() {
                     </button>
                   </div>
                   <div
+                    className="settings-row"
                     style={{
                       display: "flex",
                       justifyContent: "space-between",
@@ -405,6 +410,7 @@ export default function SettingsPage() {
                 </>
               )}
               <div
+                className="settings-row"
                 style={{
                   display: "flex",
                   justifyContent: "space-between",

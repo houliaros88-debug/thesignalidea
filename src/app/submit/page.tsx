@@ -315,7 +315,16 @@ export default function TheIdeaPage() {
       )}
       {activeCategory && (
         <div style={{ display: 'flex', flexDirection: 'column' }}>
-          <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginTop: 0, marginBottom: 16 }}>
+          <div
+            className="idea-search-row"
+            style={{
+              display: "flex",
+              gap: 12,
+              alignItems: "center",
+              marginTop: 0,
+              marginBottom: 16,
+            }}
+          >
             <input
               type="search"
               value={query}
@@ -450,7 +459,17 @@ export default function TheIdeaPage() {
                   fontFamily: 'Georgia, Times New Roman, Times, serif',
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 6, flexWrap: 'nowrap', whiteSpace: 'nowrap' }}>
+                <div
+                  className="idea-list-row"
+                  style={{
+                    display: "flex",
+                    alignItems: "baseline",
+                    gap: 8,
+                    marginBottom: 6,
+                    flexWrap: "nowrap",
+                    whiteSpace: "nowrap",
+                  }}
+                >
                   <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--ink)' }}>
                     {idea.title}
                   </div>

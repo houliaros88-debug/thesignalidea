@@ -221,6 +221,7 @@ export default function NotificationsPage() {
           {items.map((item) => (
             <div
               key={item.id}
+              className="notification-row"
               style={{
                 borderBottom: "1px solid var(--rule-light)",
                 paddingBottom: 12,

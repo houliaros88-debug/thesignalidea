@@ -588,6 +588,7 @@ export default function ReviewsHeader() {
             </div>
           )}
           <div
+            className="reviews-tabs"
             style={{
               marginTop: 12,
               display: "flex",
@@ -719,6 +720,7 @@ export default function ReviewsHeader() {
             </div>
           )}
           <div
+            className="reviews-profiles-grid"
             style={{
               display: "grid",
               gridTemplateColumns: isEmployeeList
@@ -869,6 +871,7 @@ export default function ReviewsHeader() {
         </div>
 
         <div
+          className="reviews-list-grid"
           style={{
             marginTop: 18,
             display: "grid",

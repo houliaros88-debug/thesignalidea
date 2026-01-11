@@ -314,6 +314,7 @@ export default function NewReviewPage() {
 
         <form
           onSubmit={handleSubmit}
+          className="reviews-form-grid"
           style={{ display: "grid", gap: 12, gridTemplateColumns: "repeat(2, minmax(0, 1fr))" }}
         >
           <div style={{ display: "grid", gap: 10 }}>

@@ -106,7 +106,10 @@ export default function EditProfilePage() {
       className="nyt-main"
       style={{ maxWidth: 900, margin: "32px auto", padding: "0 16px" }}
     >
-      <div style={{ display: "flex", gap: 24, alignItems: "flex-start" }}>
+      <div
+        className="profile-edit-layout"
+        style={{ display: "flex", gap: 24, alignItems: "flex-start" }}
+      >
         {photoPreview || photoUrl ? (
           <img
             src={photoPreview || photoUrl || ""}
