@@ -7,7 +7,7 @@ import { supabase } from "../../../lib/supabaseClient";
 export default function EditProfilePage() {
   const router = useRouter();
   const [fullName, setFullName] = useState("");
-  const [photoUrl, setPhotoUrl] = useState("");
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [bio, setBio] = useState("");
