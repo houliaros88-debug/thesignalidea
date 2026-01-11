@@ -109,7 +109,7 @@ export default function EditProfilePage() {
       <div style={{ display: "flex", gap: 24, alignItems: "flex-start" }}>
         {photoPreview || photoUrl ? (
           <img
-            src={photoPreview || photoUrl}
+            src={photoPreview || photoUrl || ""}
             alt="Profile"
             width={140}
             height={180}
